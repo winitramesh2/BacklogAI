@@ -50,5 +50,17 @@ class BacklogItemResponse(BaseModel):
     jira_key: Optional[str] = None
     validation_warnings: List[str] = []
     
+class BacklogItemSyncResponse(BaseModel):
+    id: UUID
+    jira_key: str
+    jira_url: str
+    status: str
+
     class Config:
         from_attributes = True
+
+class JiraSyncRequest(BaseModel):
+    title: str
+    description: str
+    priority: Optional[str] = "Medium"
+    issue_type: str = "Story"

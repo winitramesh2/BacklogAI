@@ -4,7 +4,7 @@
 
 This document tracks the development progress of the **BackLogAI** project.
 
-**Current Phase:** [Phase 3: JIRA Integration & API](#phase-3-jira-integration--api) 🔌
+**Current Phase:** [Phase 4: Kotlin Multiplatform (KMP) Shared Logic](#phase-4-kotlin-multiplatform-kmp-shared-logic) 🔄
 
 ---
 
@@ -50,16 +50,16 @@ This document tracks the development progress of the **BackLogAI** project.
 
 ## 🔌 Phase 3: JIRA Integration & API
 **Goal:** Connect the generated backlog to the real world.
-**Status:** ![Status](https://img.shields.io/badge/Pending-lightgrey?style=flat-square)
+**Status:** ![Status](https://img.shields.io/badge/Completed-green?style=flat-square)
 
-- [ ] **JIRA Connector**
-    - [ ] Implement Atlassian Python API wrapper.
-    - [ ] Map internal Story models to JIRA Issue types.
-    - [ ] Push Logic: Create/Update issues, link Epics to Stories.
-    - [ ] Pull Logic: Sync status updates.
-- [ ] **API Polish**
-    - [ ] Finalize REST API documentation (Swagger/OpenAPI).
-    - [ ] Ensure all endpoints are async.
+- [x] **JIRA Connector**
+    - [x] Implement Atlassian Python API wrapper.
+    - [x] Map internal Story models to JIRA Issue types.
+    - [x] Push Logic: Create/Update issues, link Epics to Stories.
+    - [x] Pull Logic: Sync status updates.
+- [x] **API Polish**
+    - [x] Finalize REST API documentation (Swagger/OpenAPI).
+    - [x] Ensure all endpoints are async.
 
 ---
 

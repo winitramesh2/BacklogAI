@@ -6,10 +6,18 @@ from dotenv import load_dotenv
 from uuid import uuid4
 
 # Import internal modules
-from app.schemas import BacklogItemCreate, BacklogItemResponse, PriorityLevel, PillarScores
+from app.schemas import (
+    BacklogItemCreate, 
+    BacklogItemResponse, 
+    BacklogItemSyncResponse, 
+    JiraSyncRequest,
+    PriorityLevel, 
+    PillarScores
+)
 from app.services.story_engine import StoryGenerationEngine
 from app.services.prioritization_engine import PrioritizationEngine
 from app.services.quality_engine import QualityValidationEngine
+from app.services.jira_service import JiraService
 from app.models import BacklogItem, BacklogItemStatus, Project
 
 # Load environment variables
@@ -46,6 +54,7 @@ register_tortoise(
 story_engine = StoryGenerationEngine()
 prioritization_engine = PrioritizationEngine()
 quality_engine = QualityValidationEngine()
+jira_service = JiraService()
 
 @app.get("/")
 async def root():
@@ -99,3 +108,25 @@ async def generate_backlog_item(item: BacklogItemCreate):
     )
     
     return response
+
+@app.post("/backlog/sync", response_model=BacklogItemSyncResponse)
+async def sync_to_jira(request: JiraSyncRequest):
+    """
+    Syncs a backlog item to JIRA (Create Issue).
+    """
+    try:
+        jira_response = jira_service.create_issue(
+            title=request.title,
+            description=request.description,
+            priority=request.priority or "Medium",
+            issue_type=request.issue_type
+        )
+        
+        return BacklogItemSyncResponse(
+            id=uuid4(),
+            jira_key=jira_response["key"],
+            jira_url=jira_response["url"],
+            status="synced"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
