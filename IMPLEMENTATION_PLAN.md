@@ -4,22 +4,22 @@
 
 This document tracks the development progress of the **BackLogAI** project.
 
-**Current Phase:** [Phase 1: Project Initialization](#phase-1-project-initialization--architecture-setup) 🚧
+**Current Phase:** [Phase 2: Core Backend Logic (The "Brain")](#phase-2-core-backend-logic-the-brain) 🧠
 
 ---
 
 ## 🏗️ Phase 1: Project Initialization & Architecture Setup
 **Goal:** Establish the monorepo structure, development environment, and core backend infrastructure.
-**Status:** ![Status](https://img.shields.io/badge/In%20Progress-yellow?style=flat-square)
+**Status:** ![Status](https://img.shields.io/badge/Completed-green?style=flat-square)
 
-- [ ] **Repository Setup (Monorepo)**
-    - [ ] Initialize Git repository.
-    - [ ] Structure: `/backend`, `/shared`, `/composeApp`, `/infra`.
-- [ ] **Backend Infrastructure (Dockerized)**
-    - [ ] **Database:** Setup PostgreSQL container.
-    - [ ] **Backend:** Setup Python 3.11+ container with FastAPI and Uvicorn.
-    - [ ] **ORM:** Configure Tortoise-ORM/SQLAlchemy (Async).
-    - [ ] **Migrations:** Initialize Aerich or Alembic.
+- [x] **Repository Setup (Monorepo)**
+    - [x] Initialize Git repository.
+    - [x] Structure: `/backend`, `/shared`, `/composeApp`, `/infra`.
+- [x] **Backend Infrastructure (Dockerized)**
+    - [x] **Database:** Setup PostgreSQL container.
+    - [x] **Backend:** Setup Python 3.11+ container with FastAPI and Uvicorn.
+    - [x] **ORM:** Configure Tortoise-ORM/SQLAlchemy (Async).
+    - [x] **Migrations:** Initialize Aerich or Alembic.
 - [ ] **Authentication (SSO/OAuth)**
     - [ ] Implement OAuth2 flow (Google/GitHub) with `authlib`.
     - [ ] Create `User` model.
