@@ -1,4 +1,6 @@
-# Architecture & Technology Stack: BackLogAI
+# 🏗️ Architecture: BackLogAI
+
+> **Detailed System Design, Core Modules & Technology Stack**
 
 ## 1. System Overview
 
@@ -10,135 +12,101 @@ BackLogAI is designed as a modular, containerized application with three core la
 
 ```mermaid
 graph TD
-    A[Mobile/Web/Desktop UI] -->|REST API| B[FastAPI Gateway]
-    B --> C[Input Validation]
+    subgraph Frontend
+    A[Mobile/Web/Desktop UI]
+    end
+
+    subgraph Backend
+    B[FastAPI Gateway] --> C[Input Validation]
     C --> D[Story Generation Engine]
     D --> E[Prioritization Engine]
     E --> F[Quality Validation Engine]
-    F --> G[Database Layer]
-    G --> H[JIRA Integration Module]
-    D -.->|AI API| I[OpenAI / Claude]
+    F --> G[(Database)]
+    end
+
+    subgraph External Services
+    G --> H[JIRA API]
+    D -.-> I[OpenAI / Claude API]
+    end
+
+    style Frontend fill:#f9f,stroke:#333
+    style Backend fill:#bbf,stroke:#333
+    style External Services fill:#e1f5fe,stroke:#333
 ```
+
+---
 
 ## 2. Core Modules
 
-### A. Input Module
-*   **Purpose:** Accepts structured data for the **Five Key Pillars**.
-*   **Functionality:** Validates JSON schemas, sanitizes text inputs, and normalizes priority scores (1-10 scale).
+| Module | Purpose | Key Responsibilities |
+| :--- | :--- | :--- |
+| **A. Input Module** | 📥 Data Intake | Accepts structured data for the **Five Key Pillars** (User Value, Commercial Impact, etc.). Validates schemas and sanitizes inputs. |
+| **B. Story Generation Engine** | 🤖 AI Processing | Uses LLMs to draft standard user stories (`As a... I want... So that...`) with `Given/When/Then` acceptance criteria. Decomposes Epics → Stories → Tasks. |
+| **C. Prioritization Engine** | ⚖️ Scoring Logic | Calculates definitive priority scores using **RICE**, **WSJF**, and **MoSCoW** algorithms based on pillar weights. |
+| **D. Quality Validation Engine** | ✅ Quality Control | Checks stories against **INVEST** criteria (Independent, Negotiable, Valuable, Estimable, Small, Testable). Returns warnings for vague stories. |
+| **E. JIRA Integration Module** | 🔄 Sync & Action | Syncs the generated backlog to JIRA. Creates/updates issues, links parent/child items, and pulls status updates. |
 
-### B. Story Generation Engine
-*   **Purpose:** Creates structured user stories using LLMs.
-*   **Process:**
-    1.  **Template Filling:** Populates common patterns (CRUD, Search) based on feature type.
-    2.  **AI Contextualization:** Uses product personas and goals to generate nuanced stories.
-    3.  **Decomposition:** Breaks large features (Epics) into smaller Stories and Tasks.
-
-### C. Prioritization Engine
-*   **Purpose:** Calculates definitive priority scores.
-*   **Algorithms:**
-    *   **RICE:** (Reach × Impact × Confidence) / Effort
-    *   **WSJF:** Cost of Delay / Job Duration (Technical Reality)
-    *   **MoSCoW:** Categorical sorting (Must/Should/Could/Won't) based on combined Pillar scores.
-
-### D. Quality Validation Engine
-*   **Purpose:** Ensures stories are actionable.
-*   **Criteria (INVEST):**
-    *   **I**ndependent
-    *   **N**egotiable
-    *   **V**aluable
-    *   **E**stimable
-    *   **S**mall
-    *   **T**estable
-
-### E. JIRA Integration Module
-*   **Purpose:** Syncs the generated backlog to the real world.
-*   **Capabilities:**
-    *   Create Issue (Epic/Story/Task).
-    *   Link Issues (Parent/Child).
-    *   Update Status/Description.
-    *   Two-way sync (status pull).
+---
 
 ## 3. Technology Stack
 
 ### Backend Stack
 
-*   **Language:** Python 3.11+
-    *   **Reason:** Fast, modern syntax, excellent async support, rich ecosystem.
-*   **Web Framework:** FastAPI
-    *   **Reason:** High-performance async API with native OpenAPI/Swagger support, excellent dependency injection.
-*   **Database:** PostgreSQL
-    *   **Reason:** Reliable data integrity, complex queries, JSONB support for dynamic inputs.
-*   **ORM:** Tortoise-ORM or SQLAlchemy (Async)
-    *   **Reason:** Async database operations for non-blocking I/O.
-*   **Authentication:** OAuth2 (Google/GitHub/Microsoft)
-    *   **Libraries:** `authlib` or `fastapi-sso`
-*   **AI Integration:** OpenAI API / Anthropic Claude API
-    *   **Libraries:** Official SDKs (`openai`, `anthropic`)
-*   **Testing:** 
-    *   `pytest` (Unit/Integration testing)
-    *   `httpx` (API testing)
-*   **Containerization:** Docker & Docker Compose
-    *   **Purpose:** Postgres + Backend containerization for consistent dev/prod environments.
+| Component | Technology | Why? |
+| :--- | :--- | :--- |
+| **Language** | ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python&logoColor=white) | Fast, modern syntax, excellent async support. |
+| **Framework** | ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green?style=flat-square&logo=fastapi&logoColor=white) | High-performance async API, native OpenAPI/Swagger. |
+| **Database** | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791?style=flat-square&logo=postgresql&logoColor=white) | Reliable data integrity, JSONB support for dynamic inputs. |
+| **ORM** | **Tortoise-ORM** / **SQLAlchemy** | Async database operations for non-blocking I/O. |
+| **Auth** | **OAuth2** (Google/GitHub) | Standard secure authentication via `authlib` or `fastapi-sso`. |
+| **AI** | **OpenAI** / **Anthropic** | Best-in-class LLMs for creative text generation. |
 
 ### Frontend Stack (Kotlin Multiplatform)
 
-*   **Framework:** Kotlin Multiplatform (KMP)
-    *   **Reason:** Write business logic once, deploy to multiple platforms natively.
-*   **UI Toolkit:** Compose Multiplatform
-    *   **Reason:** Declarative UI (Jetpack Compose) across Android, iOS, Desktop, and Web (Wasm).
-*   **Target Platforms:**
-    *   **Mobile:** Android, iOS
-    *   **Desktop:** macOS, Windows, Linux (JVM)
-    *   **Web:** WASM
-*   **Networking:** Ktor Client
-    *   **Reason:** Async, multiplatform HTTP client.
-*   **Serialization:** `kotlinx.serialization`
-    *   **Reason:** Type-safe JSON parsing across all platforms.
-*   **Architecture Pattern:** MVVM / MVI
-    *   **Libraries:** `voyager` (navigation) or standard Compose ViewModels.
+| Component | Technology | Why? |
+| :--- | :--- | :--- |
+| **Framework** | ![Kotlin](https://img.shields.io/badge/Kotlin-Multiplatform-7F52FF?style=flat-square&logo=kotlin&logoColor=white) | Write business logic once, run everywhere. |
+| **UI Toolkit** | **Compose Multiplatform** | Declarative UI for Android, iOS, Desktop, and Web. |
+| **Targets** | 📱 Android, iOS <br> 💻 macOS, Windows, Linux <br> 🌐 Web (Wasm) | Native performance on all major platforms. |
+| **Networking** | **Ktor Client** | Async, multiplatform HTTP client. |
+| **State** | **Voyager** / **MVI** | Robust state management and navigation. |
 
 ### DevOps & Tooling
 
 *   **Version Control:** Git (Monorepo structure)
-*   **CI/CD:** GitHub Actions
-    *   **Workflows:** Build, Test, Lint, Deploy
-*   **Code Quality:**
-    *   **Python:** `ruff` (linter/formatter), `mypy` (type checking)
-    *   **Kotlin:** `ktlint` (linter)
-*   **JIRA Integration:** Atlassian Python API Wrapper (`atlassian-python-api`)
+*   **CI/CD:** GitHub Actions (Build, Test, Lint, Deploy)
+*   **Code Quality:** `ruff` (Python), `ktlint` (Kotlin)
+*   **Containerization:** Docker & Docker Compose
 
-## 4. Data Schema (Conceptual)
+---
 
-### Project Context
-*   `id`: UUID
-*   `name`: String
-*   `description`: Text
-*   `pillars_config`: JSON (Weights for the 5 pillars)
-*   `created_at`: Timestamp
-*   `updated_at`: Timestamp
+## 4. Data Schema (Conceptual ER Diagram)
 
-### Backlog Item
-*   `id`: UUID
-*   `project_id`: UUID (FK to Project)
-*   `type`: Enum (Epic, Story, Task)
-*   `title`: String
-*   `description`: Text (As a... I want... So that...)
-*   `acceptance_criteria`: List[String] (Given/When/Then)
-*   `priority_score`: Float
-*   `pillar_scores`: JSON
-    *   `user_value`: Float (0-10)
-    *   `commercial_impact`: Float (0-10)
-    *   `strategic_horizon`: Float (0-10)
-    *   `competitive_positioning`: Float (0-10)
-    *   `technical_reality`: Float (0-10)
-*   `jira_key`: String (e.g., PROJ-123)
-*   `status`: Enum (Draft, Approved, Synced, InProgress, Done)
-*   `created_at`: Timestamp
-*   `updated_at`: Timestamp
-
-### User
-*   `id`: UUID
-*   `email`: String (unique)
-*   `oauth_provider`: Enum (Google, GitHub, Microsoft)
-*   `oauth_id`: String
-*   `created_at`: Timestamp
+```mermaid
+erDiagram
+    PROJECT ||--o{ BACKLOG_ITEM : contains
+    PROJECT {
+        uuid id PK
+        string name
+        json pillars_config "Weights for the 5 pillars"
+        timestamp created_at
+    }
+    BACKLOG_ITEM ||--o{ JIRA_SYNC : tracks
+    BACKLOG_ITEM {
+        uuid id PK
+        uuid project_id FK
+        enum type "Epic, Story, Task"
+        string title
+        text description
+        float priority_score
+        json pillar_scores
+        enum status "Draft, Approved, Synced"
+    }
+    USER ||--o{ PROJECT : owns
+    USER {
+        uuid id PK
+        string email
+        string oauth_provider
+        string oauth_id
+    }
+```
