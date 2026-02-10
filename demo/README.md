@@ -12,3 +12,5 @@ This folder contains the build artifacts and visual assets for the BackLogAI pro
 
 ## 📸 Screenshots
 *   `screenshot_1.png`: Application running on Android Emulator.
+*   `input_screen.png`: The Input Dashboard with 5 Pillars.
+*   `result_screen.png`: The Generated Story and JIRA Sync Status.
