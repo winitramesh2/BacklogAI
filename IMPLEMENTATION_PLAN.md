@@ -4,7 +4,7 @@
 
 This document tracks the development progress of the **BackLogAI** project.
 
-**Current Phase:** [Phase 4: Kotlin Multiplatform (KMP) Shared Logic](#phase-4-kotlin-multiplatform-kmp-shared-logic) 🔄
+**Current Phase:** [Phase 5: Compose Multiplatform UI](#phase-5-compose-multiplatform-ui) 📱
 
 ---
 
@@ -65,14 +65,14 @@ This document tracks the development progress of the **BackLogAI** project.
 
 ## 🔄 Phase 4: Kotlin Multiplatform (KMP) Shared Logic
 **Goal:** Write business logic once, run everywhere.
-**Status:** ![Status](https://img.shields.io/badge/Pending-lightgrey?style=flat-square)
+**Status:** ![Status](https://img.shields.io/badge/Completed-green?style=flat-square)
 
-- [ ] **Shared Module Setup**
-    - [ ] Configure KMP for Android, iOS, JVM (Desktop), and Wasm (Web).
-- [ ] **Networking & Data**
-    - [ ] **Ktor Client:** Implement API client.
-    - [ ] **Serialization:** `kotlinx.serialization` (JSON).
-    - [ ] **Repositories:** Auth, Backlog, Settings.
+- [x] **Shared Module Setup**
+    - [x] Configure KMP for Android, iOS, JVM (Desktop), and Wasm (Web).
+- [x] **Networking & Data**
+    - [x] **Ktor Client:** Implement API client.
+    - [x] **Serialization:** `kotlinx.serialization` (JSON).
+    - [x] **Repositories:** Auth, Backlog, Settings.
 - [ ] **View Models**
     - [ ] Implement shared ViewModels (MVVM).
 
