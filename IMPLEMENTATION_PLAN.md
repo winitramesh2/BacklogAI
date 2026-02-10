@@ -4,7 +4,7 @@
 
 This document tracks the development progress of the **BackLogAI** project.
 
-**Current Phase:** [Phase 5: Compose Multiplatform UI](#phase-5-compose-multiplatform-ui) 📱
+**Current Phase:** [Phase 6: Testing & Quality Assurance](#phase-6-testing--quality-assurance) ✅
 
 ---
 
@@ -73,24 +73,24 @@ This document tracks the development progress of the **BackLogAI** project.
     - [x] **Ktor Client:** Implement API client.
     - [x] **Serialization:** `kotlinx.serialization` (JSON).
     - [x] **Repositories:** Auth, Backlog, Settings.
-- [ ] **View Models**
-    - [ ] Implement shared ViewModels (MVVM).
+- [x] **View Models**
+    - [x] Implement shared ViewModels (MVVM).
 
 ---
 
 ## 📱 Phase 5: Compose Multiplatform UI
 **Goal:** Build a beautiful, responsive interface for all targets.
-**Status:** ![Status](https://img.shields.io/badge/Pending-lightgrey?style=flat-square)
+**Status:** ![Status](https://img.shields.io/badge/Completed-green?style=flat-square)
 
-- [ ] **Design System**
-    - [ ] Implement Material 3 theme.
-    - [ ] Components: `PillarInputCard`, `StoryCard`, `PriorityBadge`, `KanbanBoard`.
-- [ ] **Screens Implementation**
+- [x] **Design System**
+    - [x] Implement Material 3 theme.
+    - [x] Components: `PillarInputCard`, `StoryCard`, `PriorityBadge`, `KanbanBoard`.
+- [x] **Screens Implementation**
     - [ ] **Login Screen:** SSO handling.
     - [ ] **Dashboard:** High-level metrics.
-    - [ ] **Wizard/Input:** Multi-step form for 5 Pillars.
-    - [ ] **Backlog View:** List/Kanban, Edit Mode.
-    - [ ] **JIRA Sync:** Status dashboard.
+    - [x] **Wizard/Input:** Multi-step form for 5 Pillars.
+    - [x] **Backlog View:** List/Kanban, Edit Mode.
+    - [x] **JIRA Sync:** Status dashboard.
 - [ ] **Platform Specifics**
     - [ ] **Desktop:** Window management.
     - [ ] **Mobile:** Touch interactions.
