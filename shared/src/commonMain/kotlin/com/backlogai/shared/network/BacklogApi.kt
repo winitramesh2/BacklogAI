@@ -15,17 +15,33 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
+import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.isSuccess
+
 import com.backlogai.shared.platformBaseUrl
 
 class BacklogApi(
-    private val baseUrl: String = platformBaseUrl
+    private val baseUrl: String = platformBaseUrl,
+    engine: HttpClientEngine? = null
 ) {
-    private val client = HttpClient {
-        install(ContentNegotiation) {
-            json(Json {
-                prettyPrint = true
-                ignoreUnknownKeys = true
-            })
+    private val client = if (engine != null) {
+        HttpClient(engine) {
+            install(ContentNegotiation) {
+                json(Json {
+                    prettyPrint = true
+                    ignoreUnknownKeys = true
+                })
+            }
+        }
+    } else {
+        HttpClient {
+            install(ContentNegotiation) {
+                json(Json {
+                    prettyPrint = true
+                    ignoreUnknownKeys = true
+                })
+            }
         }
     }
 
@@ -40,16 +56,30 @@ class BacklogApi(
     }
 
     suspend fun generateBacklogItem(request: BacklogItemCreate): BacklogItemResponse {
-        return client.post("$baseUrl/backlog/generate") {
+        val response = client.post("$baseUrl/backlog/generate") {
             contentType(ContentType.Application.Json)
             setBody(request)
-        }.body()
+        }
+        
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            throw Exception("API Error ${response.status.value}: $errorBody")
+        }
+        
+        return response.body()
     }
 
     suspend fun syncToJira(request: JiraSyncRequest): BacklogItemSyncResponse {
-        return client.post("$baseUrl/backlog/sync") {
+        val response = client.post("$baseUrl/backlog/sync") {
             contentType(ContentType.Application.Json)
             setBody(request)
-        }.body()
+        }
+        
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            throw Exception("API Error ${response.status.value}: $errorBody")
+        }
+        
+        return response.body()
     }
 }

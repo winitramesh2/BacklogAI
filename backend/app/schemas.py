@@ -37,12 +37,17 @@ class BacklogItemCreate(BaseModel):
     personas: List[str] = Field(default=[], description="Target users e.g. ['Admin', 'Sales Rep']")
     acceptance_criteria_hint: Optional[str] = Field(None, description="Specific requirements to include")
 
+class SubTask(BaseModel):
+    title: str
+    description: str
+
 # --- Output Models ---
 class BacklogItemResponse(BaseModel):
     id: UUID
     title: str
     description: str
     acceptance_criteria: List[str]
+    sub_tasks: List[SubTask] = []
     priority_score: float
     moscow_priority: PriorityLevel
     pillar_scores: PillarScores

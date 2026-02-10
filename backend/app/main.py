@@ -99,7 +99,8 @@ async def generate_backlog_item(item: BacklogItemCreate):
         id=uuid4(),
         title=item.title,
         description=generated_content.get("user_story", item.description), # Fallback if AI fails
-        acceptance_criteria=acceptance_criteria,
+        acceptance_criteria=generated_content.get("acceptance_criteria", []),
+        sub_tasks=generated_content.get("sub_tasks", []),
         priority_score=priority_score,
         moscow_priority=priority_level,
         pillar_scores=item.pillar_scores,

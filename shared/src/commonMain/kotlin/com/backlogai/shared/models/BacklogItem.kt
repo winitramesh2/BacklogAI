@@ -39,6 +39,12 @@ data class BacklogItemCreate(
 )
 
 @Serializable
+data class SubTask(
+    val title: String,
+    val description: String
+)
+
+@Serializable
 data class BacklogItemResponse(
     val id: String, // UUID
     val title: String,
@@ -46,6 +52,9 @@ data class BacklogItemResponse(
     
     @SerialName("acceptance_criteria")
     val acceptanceCriteria: List<String> = emptyList(),
+    
+    @SerialName("sub_tasks")
+    val subTasks: List<SubTask> = emptyList(),
     
     @SerialName("priority_score")
     val priorityScore: Double,

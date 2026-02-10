@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,14 +24,21 @@ import com.backlogai.shared.models.JiraSyncRequest
 import com.backlogai.shared.network.BacklogApi
 import kotlinx.coroutines.launch
 
+sealed class JiraStatus {
+    object Idle : JiraStatus()
+    object Syncing : JiraStatus()
+    data class Success(val key: String) : JiraStatus()
+    data class Error(val message: String) : JiraStatus()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 class ResultScreen(val response: BacklogItemResponse) : Screen {
 
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val scope = rememberCoroutineScope()
-        var syncStatus by remember { mutableStateOf<String?>(null) }
-        var isSyncing by remember { mutableStateOf(false) }
+        var jiraStatus by remember { mutableStateOf<JiraStatus>(JiraStatus.Idle) }
         
         // Simple DI
         val api = remember { BacklogApi() }
@@ -50,6 +59,7 @@ class ResultScreen(val response: BacklogItemResponse) : Screen {
                 modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // ... (Previous cards remain same) ...
                 item {
                     PriorityCard(response.priorityScore, response.moscowPriority)
                 }
@@ -83,44 +93,90 @@ class ResultScreen(val response: BacklogItemResponse) : Screen {
                     }
                 }
                 
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                isSyncing = true
-                                try {
-                                    val syncResponse = api.syncToJira(
-                                        JiraSyncRequest(
-                                            title = response.title,
-                                            description = response.description,
-                                            priority = response.moscowPriority,
-                                            issueType = "Story"
-                                        )
-                                    )
-                                    syncStatus = "Synced! Key: ${syncResponse.jiraKey}"
-                                } catch (e: Exception) {
-                                    syncStatus = "Sync Failed: ${e.message}"
-                                } finally {
-                                    isSyncing = false
-                                }
-                            }
-                        },
-                        enabled = !isSyncing && syncStatus == null,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (isSyncing) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                        } else {
-                            Text(if (syncStatus != null) "Synced to JIRA" else "Sync to JIRA")
+                if (response.subTasks.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.List, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Technical Tasks (Decomposition)", style = MaterialTheme.typography.titleLarge)
                         }
                     }
                     
-                    if (syncStatus != null) {
+                    items(response.subTasks) { task ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(task.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text(task.description, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+                
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    val buttonColor = when (jiraStatus) {
+                        is JiraStatus.Success -> Color(0xFF4CAF50) // Green
+                        is JiraStatus.Error -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.primary
+                    }
+                    
+                    Button(
+                        onClick = {
+                            if (jiraStatus !is JiraStatus.Success) {
+                                scope.launch {
+                                    jiraStatus = JiraStatus.Syncing
+                                    try {
+                                        val syncResponse = api.syncToJira(
+                                            JiraSyncRequest(
+                                                title = response.title,
+                                                description = response.description,
+                                                priority = response.moscowPriority,
+                                                issueType = "Story"
+                                            )
+                                        )
+                                        jiraStatus = JiraStatus.Success(syncResponse.jiraKey)
+                                    } catch (e: Exception) {
+                                        jiraStatus = JiraStatus.Error(e.message ?: "Unknown error")
+                                    }
+                                }
+                            }
+                        },
+                        enabled = jiraStatus !is JiraStatus.Syncing && jiraStatus !is JiraStatus.Success,
+                        colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+                        modifier = Modifier.fillMaxWidth().height(50.dp)
+                    ) {
+                        when (val status = jiraStatus) {
+                            is JiraStatus.Syncing -> {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Syncing...")
+                            }
+                            is JiraStatus.Success -> {
+                                Icon(Icons.Default.Check, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Synced: ${status.key}")
+                            }
+                            is JiraStatus.Error -> {
+                                Icon(Icons.Default.Close, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Retry Sync")
+                            }
+                            is JiraStatus.Idle -> {
+                                Text("Sync to JIRA")
+                            }
+                        }
+                    }
+                    
+                    if (jiraStatus is JiraStatus.Error) {
                         Text(
-                            text = syncStatus!!,
-                            color = if (syncStatus!!.startsWith("Synced")) Color.Green else Color.Red,
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = (jiraStatus as JiraStatus.Error).message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }

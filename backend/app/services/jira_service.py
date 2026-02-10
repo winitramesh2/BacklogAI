@@ -6,20 +6,27 @@ class JiraService:
     def __init__(self):
         self.url = os.getenv("JIRA_URL")
         self.username = os.getenv("JIRA_USERNAME")
-        self.token = os.getenv("JIRA_API_TOKEN")
+        self.password = os.getenv("JIRA_PASSWORD") or os.getenv("JIRA_API_TOKEN")
         self.project_key = os.getenv("JIRA_PROJECT_KEY", "KAN") # Default project key
         
         self.jira = None
-        if self.url and self.username and self.token:
+        if self.url and self.username and self.password:
+            print(f"Attempting to connect to JIRA at {self.url} as {self.username}")
             try:
+                is_cloud = "atlassian.net" in self.url
                 self.jira = Jira(
                     url=self.url,
                     username=self.username,
-                    password=self.token,
-                    cloud=True
+                    password=self.password,
+                    cloud=is_cloud
                 )
+                # Essential for JIRA Server/DC to bypass XSRF checks on POST requests
+                self.jira.session.headers.update({"X-Atlassian-Token": "no-check"})
+                print(f"JIRA client initialized successfully (Cloud: {is_cloud}).")
             except Exception as e:
                 print(f"Failed to initialize JIRA client: {e}")
+        else:
+            print("JIRA credentials missing. Using Mock Mode.")
     
     def create_issue(self, title: str, description: str, priority: str, issue_type: str = "Story") -> Dict[str, str]:
         """

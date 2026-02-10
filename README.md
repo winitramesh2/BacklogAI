@@ -63,6 +63,30 @@ graph LR
 
 ---
 
+## 🔑 Configuration & Setup
+
+To run BackLogAI effectively, you need to configure external services in your `.env` file.
+
+### 1. OpenAI API (Story Generation)
+*   **Sign up/Login:** [OpenAI Platform](https://platform.openai.com/)
+*   **Create Key:** Go to [API Keys](https://platform.openai.com/api-keys) -> **Create new secret key**.
+*   **Set Env:** `OPENAI_API_KEY=sk-...`
+*   *Note: If you have issues logging in, try accessing [platform.openai.com](https://platform.openai.com) directly instead of auth subdomains.*
+
+### 2. JIRA Integration (Sync)
+*   **URL:** Your Atlassian domain (e.g., `https://your-domain.atlassian.net`).
+*   **Username:** Your Atlassian email address.
+*   **API Token:** Go to [Atlassian Security](https://id.atlassian.com/manage-profile/security/api-tokens) -> **Create API token**.
+*   **Set Env:**
+    ```properties
+    JIRA_URL=https://your-domain.atlassian.net
+    JIRA_USERNAME=your.email@example.com
+    JIRA_API_TOKEN=your_api_token
+    JIRA_PROJECT_KEY=KAN
+    ```
+
+---
+
 ## 🏗️ Architecture & Tech Stack
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed system design.

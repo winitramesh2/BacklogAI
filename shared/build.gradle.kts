@@ -5,6 +5,8 @@ plugins {
 }
 
 kotlin {
+    applyDefaultHierarchyTemplate()
+    
     androidTarget {
         compilations.all {
             kotlinOptions {
@@ -31,9 +33,17 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
-                implementation(libs.ktor.client.core)
+                api(libs.ktor.client.core)
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.serialization.kotlinx.json)
+            }
+        }
+        
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.ktor.client.mock)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         
@@ -43,8 +53,7 @@ kotlin {
             }
         }
         
-        val iosMain by creating {
-            dependsOn(commonMain)
+        val iosMain by getting {
             dependencies {
                 implementation(libs.ktor.client.darwin)
             }

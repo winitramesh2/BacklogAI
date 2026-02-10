@@ -39,7 +39,11 @@ class StoryGenerationEngine:
                 "Given... When... Then...",
                 "Given... When... Then..."
             ],
-            "technical_notes": "Implementation details..."
+            "technical_notes": "Implementation details...",
+            "sub_tasks": [
+                {"title": "Task 1", "description": "Do X"},
+                {"title": "Task 2", "description": "Do Y"}
+            ]
         }
         """
         
@@ -51,6 +55,8 @@ class StoryGenerationEngine:
         - User Value: {pillar_scores.get('user_value')}
         - Commercial Impact: {pillar_scores.get('commercial_impact')}
         - Technical Reality: {pillar_scores.get('technical_reality')}
+        
+        Please break this down into a main User Story and smaller technical sub-tasks/stories if the feature is complex.
         """
         
         try:
@@ -76,5 +82,10 @@ class StoryGenerationEngine:
                 "Given I am on the dashboard, When I click the button, Then the action completes.",
                 "Given the system is offline, When I try to access, Then I see an error message."
             ],
-            "technical_notes": "Mock generated content. Configure OpenAI API key for real intelligence."
+            "technical_notes": "Mock generated content. Configure OpenAI API key for real intelligence.",
+            "sub_tasks": [
+                {"title": "Design UI Mockups", "description": "Create screens for " + title},
+                {"title": "Implement Backend API", "description": "Endpoints for " + title},
+                {"title": "Unit Testing", "description": "Verify logic for " + title}
+            ]
         }
