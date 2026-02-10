@@ -6,7 +6,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     volumes:
-      - ./backend/app:/code/app
+      - ./backend:/code
     ports:
       - "8000:8000"
     environment:
