@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -114,34 +116,20 @@ class InputScreen : Screen {
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                TopAppBar(
-                    title = { Text("BackLogAI") },
-                    actions = {
-                        Box(
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .clickable { screenModel.checkServerStatus() }
-                                .padding(8.dp) // Touch target padding
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .background(if (serverStatus) Color.Green else Color.Red)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    if (serverStatus) "Online" else "Offline", 
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            }
-                        }
-                    }
-                )
-            }
+            topBar = {}
         ) { padding ->
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                MaterialTheme.colorScheme.background
+                            )
+                        )
+                    )
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -150,78 +138,85 @@ class InputScreen : Screen {
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text("Product Context", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            OutlinedTextField(
-                                value = context,
-                                onValueChange = { context = it },
-                                label = { Text("Context") },
-                                modifier = Modifier.fillMaxWidth(),
-                                minLines = 3,
-                                enabled = !isLoading
-                            )
+                    HeaderBlock(
+                        serverStatus = serverStatus,
+                        onRefresh = { screenModel.checkServerStatus() }
+                    )
 
-                            OutlinedTextField(
-                                value = objective,
-                                onValueChange = { objective = it },
-                                label = { Text("Objective") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                enabled = !isLoading
-                            )
+                    SectionCard(
+                        title = "Define the product need",
+                        subtitle = "Give context and objective. The AI fills the rest."
+                    ) {
+                        OutlinedTextField(
+                            value = context,
+                            onValueChange = { context = it },
+                            label = { Text("Context") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 4,
+                            enabled = !isLoading
+                        )
 
-                            OutlinedTextField(
-                                value = targetUser,
-                                onValueChange = { targetUser = it },
-                                label = { Text("Target User (optional)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                enabled = !isLoading
-                            )
-
-                            OutlinedTextField(
-                                value = marketSegment,
-                                onValueChange = { marketSegment = it },
-                                label = { Text("Market Segment (optional)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                enabled = !isLoading
-                            )
-
-                            OutlinedTextField(
-                                value = constraints,
-                                onValueChange = { constraints = it },
-                                label = { Text("Constraints (optional)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                minLines = 2,
-                                enabled = !isLoading
-                            )
-
-                            OutlinedTextField(
-                                value = successMetrics,
-                                onValueChange = { successMetrics = it },
-                                label = { Text("Success Metrics (optional)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                minLines = 2,
-                                enabled = !isLoading
-                            )
-
-                            OutlinedTextField(
-                                value = competitors,
-                                onValueChange = { competitors = it },
-                                label = { Text("Competitors (comma-separated, optional)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                enabled = !isLoading
-                            )
-                        }
+                        OutlinedTextField(
+                            value = objective,
+                            onValueChange = { objective = it },
+                            label = { Text("Objective") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !isLoading
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    SectionCard(
+                        title = "Add optional signals",
+                        subtitle = "Helps the AI choose better benchmarks and metrics."
+                    ) {
+                        OutlinedTextField(
+                            value = targetUser,
+                            onValueChange = { targetUser = it },
+                            label = { Text("Target User") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !isLoading
+                        )
+
+                        OutlinedTextField(
+                            value = marketSegment,
+                            onValueChange = { marketSegment = it },
+                            label = { Text("Market Segment") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !isLoading
+                        )
+
+                        OutlinedTextField(
+                            value = constraints,
+                            onValueChange = { constraints = it },
+                            label = { Text("Constraints") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2,
+                            enabled = !isLoading
+                        )
+
+                        OutlinedTextField(
+                            value = successMetrics,
+                            onValueChange = { successMetrics = it },
+                            label = { Text("Success Metrics") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2,
+                            enabled = !isLoading
+                        )
+
+                        OutlinedTextField(
+                            value = competitors,
+                            onValueChange = { competitors = it },
+                            label = { Text("Competitors (comma-separated)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !isLoading
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
                 
                 // Floating Action Button Style for Generation
@@ -270,6 +265,82 @@ class InputScreen : Screen {
                         CircularProgressIndicator()
                     }
                 }
+            }
+        }
+    }
+
+    @Composable
+    private fun HeaderBlock(serverStatus: Boolean, onRefresh: () -> Unit) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.large)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiary
+                        )
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    Text("BacklogAI", style = MaterialTheme.typography.displayLarge, color = MaterialTheme.colorScheme.onPrimary)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Turn product context into JIRA-ready stories",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.12f))
+                        .clickable { onRefresh() }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(if (serverStatus) Color(0xFFB8F7D4) else Color(0xFFFFB4A6), shape = MaterialTheme.shapes.small)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            if (serverStatus) "Online" else "Offline",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun SectionCard(
+        title: String,
+        subtitle: String,
+        content: @Composable ColumnScope.() -> Unit
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(title, style = MaterialTheme.typography.titleLarge)
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                content()
             }
         }
     }

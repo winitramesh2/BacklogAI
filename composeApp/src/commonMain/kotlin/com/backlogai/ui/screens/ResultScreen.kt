@@ -1,5 +1,6 @@
 package com.backlogai.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Generated Backlog Item") },
+                    title = { Text("Story Preview") },
                     navigationIcon = {
                         IconButton(onClick = { navigator.pop() }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -59,13 +61,21 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                 modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // ... (Previous cards remain same) ...
                 item {
-                    PriorityCard(response.priorityScore, response.moscowPriority)
+                    HeaderCard(
+                        summary = response.summary,
+                        userStory = response.userStory,
+                        priority = response.moscowPriority
+                    )
                 }
 
                 item {
-                    QualityScoreCard(response.qualityScore)
+                    MetricRow(
+                        leftLabel = "Priority Score",
+                        leftValue = response.priorityScore.toInt().toString(),
+                        rightLabel = "Quality Score",
+                        rightValue = response.qualityScore.toInt().toString()
+                    )
                 }
 
                 if (response.validationWarnings.isNotEmpty()) {
@@ -75,19 +85,16 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                 }
 
                 item {
-                    Text("Summary", style = MaterialTheme.typography.titleLarge)
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(response.summary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(response.userStory, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
+                    SectionHeader("Acceptance Criteria")
+                }
+
+                items(response.acceptanceCriteria) { criteria ->
+                    BulletRow(criteria)
                 }
 
                 if (response.researchSummary.trends.isNotEmpty() || response.researchSummary.competitorFeatures.isNotEmpty()) {
                     item {
-                        Text("Research Summary", style = MaterialTheme.typography.titleLarge)
+                        SectionHeader("Research Summary")
                     }
 
                     items(response.researchSummary.trends) { trend ->
@@ -101,23 +108,15 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                     items(response.researchSummary.differentiators) { diff ->
                         BulletRow("Differentiator: $diff")
                     }
-                }
 
-                item {
-                    Text("Acceptance Criteria", style = MaterialTheme.typography.titleLarge)
-                }
-                
-                items(response.acceptanceCriteria) { criteria ->
-                    Row(verticalAlignment = Alignment.Top) {
-                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(criteria, style = MaterialTheme.typography.bodyMedium)
+                    items(response.researchSummary.sources) { source ->
+                        BulletRow("Source: $source")
                     }
                 }
 
                 if (response.nonFunctionalReqs.isNotEmpty()) {
                     item {
-                        Text("Non-functional Requirements", style = MaterialTheme.typography.titleLarge)
+                        SectionHeader("Non-functional Requirements")
                     }
                     items(response.nonFunctionalReqs) { req ->
                         BulletRow(req)
@@ -126,7 +125,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
 
                 if (response.metrics.isNotEmpty()) {
                     item {
-                        Text("Success Metrics", style = MaterialTheme.typography.titleLarge)
+                        SectionHeader("Success Metrics")
                     }
                     items(response.metrics) { metric ->
                         BulletRow(metric)
@@ -135,7 +134,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
 
                 if (response.risks.isNotEmpty()) {
                     item {
-                        Text("Risks", style = MaterialTheme.typography.titleLarge)
+                        SectionHeader("Risks")
                     }
                     items(response.risks) { risk ->
                         BulletRow(risk)
@@ -144,7 +143,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
 
                 if (response.rolloutPlan.isNotEmpty()) {
                     item {
-                        Text("Rollout Plan", style = MaterialTheme.typography.titleLarge)
+                        SectionHeader("Rollout Plan")
                     }
                     items(response.rolloutPlan) { step ->
                         BulletRow(step)
@@ -157,7 +156,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.List, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Technical Tasks (Decomposition)", style = MaterialTheme.typography.titleLarge)
+                            Text("Technical Tasks", style = MaterialTheme.typography.titleLarge)
                         }
                     }
                     
@@ -176,13 +175,13 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                 
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
-                    
+
                     val buttonColor = when (jiraStatus) {
-                        is JiraStatus.Success -> Color(0xFF4CAF50) // Green
+                        is JiraStatus.Success -> Color(0xFF4CAF50)
                         is JiraStatus.Error -> MaterialTheme.colorScheme.error
                         else -> MaterialTheme.colorScheme.primary
                     }
-                    
+
                     Button(
                         onClick = {
                             if (jiraStatus !is JiraStatus.Success) {
@@ -229,7 +228,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                             }
                         }
                     }
-                    
+
                     if (jiraStatus is JiraStatus.Error) {
                         Text(
                             text = (jiraStatus as JiraStatus.Error).message,
@@ -238,38 +237,6 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
-                }
-            }
-        }
-    }
-    
-    @Composable
-    fun PriorityCard(score: Double, moscow: String) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            ),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("Priority Score", style = MaterialTheme.typography.labelMedium)
-                    Text(score.toString(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                }
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.primary
-                ) {
-                    Text(
-                        moscow,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        style = MaterialTheme.typography.labelLarge
-                    )
                 }
             }
         }
@@ -298,21 +265,73 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
     }
 
     @Composable
-    fun QualityScoreCard(score: Double) {
+    fun HeaderCard(summary: String, userStory: String, priority: String) {
         Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer
-            ),
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Summary", style = MaterialTheme.typography.titleLarge)
+                    PriorityPill(priority)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(summary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(userStory, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+    }
+
+    @Composable
+    fun PriorityPill(priority: String) {
+        Box(
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.primary)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            Text(priority, color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+
+    @Composable
+    fun MetricRow(leftLabel: String, leftValue: String, rightLabel: String, rightValue: String) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            MetricCard(leftLabel, leftValue, modifier = Modifier.weight(1f))
+            MetricCard(rightLabel, rightValue, modifier = Modifier.weight(1f))
+        }
+    }
+
+    @Composable
+    fun MetricCard(label: String, value: String, modifier: Modifier = Modifier) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+            modifier = modifier
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+
+    @Composable
+    fun SectionHeader(title: String) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Quality Score", style = MaterialTheme.typography.labelMedium)
-                Text(score.toInt().toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            }
+            Text(title, style = MaterialTheme.typography.titleLarge)
         }
     }
 
