@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -93,6 +95,9 @@ class InputScreen : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val screenModel = remember { InputScreenModel() }
         val snackbarHostState = remember { SnackbarHostState() }
+        var infoDialogTitle by remember { mutableStateOf("") }
+        var infoDialogBody by remember { mutableStateOf("") }
+        var showInfoDialog by remember { mutableStateOf(false) }
         
         var context by remember { mutableStateOf("") }
         var objective by remember { mutableStateOf("") }
@@ -145,7 +150,12 @@ class InputScreen : Screen {
 
                     SectionCard(
                         title = "Define the product need",
-                        subtitle = "Give context and objective. The AI fills the rest."
+                        subtitle = "Give context and objective. The AI fills the rest.",
+                        onInfoClick = {
+                            infoDialogTitle = "Define the product need"
+                            infoDialogBody = "Share the background and the outcome you want.\n\nExample context: We help PMs convert raw customer feedback into prioritized JIRA stories for B2B SaaS teams.\nExample objective: Increase story clarity so PMs spend 40% less time editing before JIRA sync."
+                            showInfoDialog = true
+                        }
                     ) {
                         OutlinedTextField(
                             value = context,
@@ -168,7 +178,12 @@ class InputScreen : Screen {
 
                     SectionCard(
                         title = "Add optional signals",
-                        subtitle = "Helps the AI choose better benchmarks and metrics."
+                        subtitle = "Helps the AI choose better benchmarks and metrics.",
+                        onInfoClick = {
+                            infoDialogTitle = "Add optional signals"
+                            infoDialogBody = "These inputs improve research and prioritization.\n\nExample target user: Product Manager.\nExample segment: B2B SaaS.\nExample constraints: Must work with existing JIRA sync.\nExample success metrics: Reduce edits before sync by 40%.\nExample competitors: Linear, Productboard."
+                            showInfoDialog = true
+                        }
                     ) {
                         OutlinedTextField(
                             value = targetUser,
@@ -267,6 +282,19 @@ class InputScreen : Screen {
                 }
             }
         }
+
+        if (showInfoDialog) {
+            AlertDialog(
+                onDismissRequest = { showInfoDialog = false },
+                title = { Text(infoDialogTitle) },
+                text = { Text(infoDialogBody) },
+                confirmButton = {
+                    TextButton(onClick = { showInfoDialog = false }) {
+                        Text("Close")
+                    }
+                }
+            )
+        }
     }
 
     @Composable
@@ -328,6 +356,7 @@ class InputScreen : Screen {
     private fun SectionCard(
         title: String,
         subtitle: String,
+        onInfoClick: (() -> Unit)? = null,
         content: @Composable ColumnScope.() -> Unit
     ) {
         Card(
@@ -338,7 +367,26 @@ class InputScreen : Screen {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(title, style = MaterialTheme.typography.titleLarge)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    if (onInfoClick != null) {
+                        IconButton(
+                            onClick = onInfoClick,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = "$title info",
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 content()
             }
