@@ -103,14 +103,21 @@ class StoryGenerationEngine:
         success_metrics: Optional[str],
         competitors: List[str],
     ) -> Dict:
-        if not self.client:
-            return self._mock_generation_v2(context, objective, target_user)
-
         research_inputs = await self.research_service.fetch_research_inputs(
             objective=objective,
             market_segment=market_segment,
             competitors=competitors,
         )
+
+        if not self.client:
+            return self._fallback_generation_v2(
+                context=context,
+                objective=objective,
+                target_user=target_user,
+                constraints=constraints,
+                success_metrics=success_metrics,
+                research_inputs=research_inputs,
+            )
 
         system_prompt = """
         You are an expert Product Manager and Business Analyst.
@@ -178,7 +185,14 @@ class StoryGenerationEngine:
             return json.loads(content)
         except Exception as e:
             print(f"AI Generation Error (v2): {e}")
-            return self._mock_generation_v2(context, objective, target_user)
+            return self._fallback_generation_v2(
+                context=context,
+                objective=objective,
+                target_user=target_user,
+                constraints=constraints,
+                success_metrics=success_metrics,
+                research_inputs=research_inputs,
+            )
 
     async def revise_story_v2(self, draft: Dict, warnings: List[str]) -> Dict:
         if not self.client:
@@ -210,8 +224,21 @@ class StoryGenerationEngine:
             print(f"AI Revision Error (v2): {e}")
             return draft
 
-    def _mock_generation_v2(self, context: str, objective: str, target_user: Optional[str]) -> Dict:
+    def _fallback_generation_v2(
+        self,
+        context: str,
+        objective: str,
+        target_user: Optional[str],
+        constraints: Optional[str],
+        success_metrics: Optional[str],
+        research_inputs: Dict,
+    ) -> Dict:
         persona = target_user or "user"
+        metrics = self._split_list(success_metrics)
+        non_functional = self._split_list(constraints)
+        snippets = research_inputs.get("snippets", [])
+        sources = research_inputs.get("sources", [])
+        trends = [s for s in snippets[:4]] if snippets else ["insufficient research"]
         return {
             "summary": objective[:80],
             "user_story": f"As a {persona}, I want {objective.lower()} so that I can achieve the desired outcome.",
@@ -225,15 +252,15 @@ class StoryGenerationEngine:
             ],
             "dependencies": [],
             "risks": ["Insufficient research"],
-            "metrics": ["Adoption rate", "Task completion"],
+            "metrics": metrics or ["Adoption rate", "Task completion"],
             "rollout_plan": ["Internal QA", "Limited beta", "Full release"],
-            "non_functional_reqs": ["Performance under expected load"],
+            "non_functional_reqs": non_functional or ["Performance under expected load"],
             "research_summary": {
-                "trends": ["insufficient research"],
+                "trends": trends,
                 "competitor_features": [],
                 "differentiators": [],
                 "risks": ["insufficient research"],
-                "sources": []
+                "sources": sources
             },
             "pillar_scores": {
                 "user_value": 5,
@@ -243,3 +270,10 @@ class StoryGenerationEngine:
                 "technical_reality": 5
             }
         }
+
+    @staticmethod
+    def _split_list(value: Optional[str]) -> List[str]:
+        if not value:
+            return []
+        parts = [p.strip() for p in value.replace(";", ",").split(",")]
+        return [p for p in parts if p]
