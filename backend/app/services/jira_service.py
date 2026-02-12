@@ -1,6 +1,8 @@
 import os
 from atlassian import Jira
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
+
+from app.schemas import ResearchSummary
 
 class JiraService:
     def __init__(self):
@@ -59,6 +61,75 @@ class JiraService:
         except Exception as e:
             print(f"JIRA Create Error: {e}")
             raise e
+
+    def create_issue_v2(
+        self,
+        summary: str,
+        description: str,
+        priority: str,
+        issue_type: str = "Story",
+        labels: List[str] | None = None,
+        components: List[str] | None = None,
+    ) -> Dict[str, str]:
+        if not self.jira:
+            return self._mock_create_issue(summary)
+
+        try:
+            issue_dict = {
+                "project": {"key": self.project_key},
+                "summary": summary,
+                "description": description,
+                "issuetype": {"name": issue_type},
+            }
+
+            if labels:
+                issue_dict["labels"] = labels
+            if components:
+                issue_dict["components"] = [{"name": c} for c in components]
+
+            new_issue = self.jira.issue_create(fields=issue_dict)
+            return {
+                "key": new_issue["key"],
+                "url": f"{self.url}/browse/{new_issue['key']}"
+            }
+        except Exception as e:
+            print(f"JIRA Create Error (v2): {e}")
+            raise e
+
+    @staticmethod
+    def build_description_template(
+        context: str,
+        objective: str,
+        user_story: str,
+        acceptance_criteria: List[str],
+        non_functional_reqs: List[str],
+        risks: List[str],
+        metrics: List[str],
+        rollout_plan: List[str],
+        research_summary: ResearchSummary,
+    ) -> str:
+        def format_section(title: str, items: List[str]) -> str:
+            if not items:
+                return f"*{title}*\n- None"
+            lines = "\n".join([f"- {item}" for item in items])
+            return f"*{title}*\n{lines}"
+
+        parts = [
+            f"*Background*\n{context}",
+            f"*Objective*\n{objective}",
+            f"*User Story*\n{user_story}",
+            format_section("Acceptance Criteria", acceptance_criteria),
+            format_section("Non-functional Requirements", non_functional_reqs),
+            format_section("Risks", risks),
+            format_section("Metrics", metrics),
+            format_section("Rollout Plan", rollout_plan),
+            format_section("Market Trends", research_summary.trends),
+            format_section("Competitor Features", research_summary.competitor_features),
+            format_section("Differentiators", research_summary.differentiators),
+            format_section("Research Sources", research_summary.sources),
+        ]
+
+        return "\n\n".join(parts)
 
     def _mock_create_issue(self, title: str) -> Dict[str, str]:
         """Simulates JIRA creation for development/testing."""

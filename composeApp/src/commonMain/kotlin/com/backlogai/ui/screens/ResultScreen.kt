@@ -19,8 +19,8 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.backlogai.shared.models.BacklogItemResponse
-import com.backlogai.shared.models.JiraSyncRequest
+import com.backlogai.shared.models.BacklogItemGenerateV2Response
+import com.backlogai.shared.models.JiraSyncRequestV2
 import com.backlogai.shared.network.BacklogApi
 import kotlinx.coroutines.launch
 
@@ -32,7 +32,7 @@ sealed class JiraStatus {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-class ResultScreen(val response: BacklogItemResponse) : Screen {
+class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
 
     @Composable
     override fun Content() {
@@ -64,6 +64,10 @@ class ResultScreen(val response: BacklogItemResponse) : Screen {
                     PriorityCard(response.priorityScore, response.moscowPriority)
                 }
 
+                item {
+                    QualityScoreCard(response.qualityScore)
+                }
+
                 if (response.validationWarnings.isNotEmpty()) {
                     item {
                         WarningCard(response.validationWarnings)
@@ -71,13 +75,31 @@ class ResultScreen(val response: BacklogItemResponse) : Screen {
                 }
 
                 item {
-                    Text("User Story", style = MaterialTheme.typography.titleLarge)
+                    Text("Summary", style = MaterialTheme.typography.titleLarge)
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(response.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(response.summary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(response.description, style = MaterialTheme.typography.bodyMedium)
+                            Text(response.userStory, style = MaterialTheme.typography.bodyMedium)
                         }
+                    }
+                }
+
+                if (response.researchSummary.trends.isNotEmpty() || response.researchSummary.competitorFeatures.isNotEmpty()) {
+                    item {
+                        Text("Research Summary", style = MaterialTheme.typography.titleLarge)
+                    }
+
+                    items(response.researchSummary.trends) { trend ->
+                        BulletRow(trend)
+                    }
+
+                    items(response.researchSummary.competitorFeatures) { feature ->
+                        BulletRow("Competitor: $feature")
+                    }
+
+                    items(response.researchSummary.differentiators) { diff ->
+                        BulletRow("Differentiator: $diff")
                     }
                 }
 
@@ -90,6 +112,42 @@ class ResultScreen(val response: BacklogItemResponse) : Screen {
                         Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(criteria, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                if (response.nonFunctionalReqs.isNotEmpty()) {
+                    item {
+                        Text("Non-functional Requirements", style = MaterialTheme.typography.titleLarge)
+                    }
+                    items(response.nonFunctionalReqs) { req ->
+                        BulletRow(req)
+                    }
+                }
+
+                if (response.metrics.isNotEmpty()) {
+                    item {
+                        Text("Success Metrics", style = MaterialTheme.typography.titleLarge)
+                    }
+                    items(response.metrics) { metric ->
+                        BulletRow(metric)
+                    }
+                }
+
+                if (response.risks.isNotEmpty()) {
+                    item {
+                        Text("Risks", style = MaterialTheme.typography.titleLarge)
+                    }
+                    items(response.risks) { risk ->
+                        BulletRow(risk)
+                    }
+                }
+
+                if (response.rolloutPlan.isNotEmpty()) {
+                    item {
+                        Text("Rollout Plan", style = MaterialTheme.typography.titleLarge)
+                    }
+                    items(response.rolloutPlan) { step ->
+                        BulletRow(step)
                     }
                 }
                 
@@ -131,12 +189,12 @@ class ResultScreen(val response: BacklogItemResponse) : Screen {
                                 scope.launch {
                                     jiraStatus = JiraStatus.Syncing
                                     try {
-                                        val syncResponse = api.syncToJira(
-                                            JiraSyncRequest(
-                                                title = response.title,
+                                        val syncResponse = api.syncToJiraV2(
+                                            JiraSyncRequestV2(
+                                                summary = response.summary,
                                                 description = response.description,
-                                                priority = response.moscowPriority,
-                                                issueType = "Story"
+                                                issueType = "Story",
+                                                priority = response.moscowPriority
                                             )
                                         )
                                         jiraStatus = JiraStatus.Success(syncResponse.jiraKey)
@@ -236,6 +294,34 @@ class ResultScreen(val response: BacklogItemResponse) : Screen {
                     Text("• $warning", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
                 }
             }
+        }
+    }
+
+    @Composable
+    fun QualityScoreCard(score: Double) {
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Quality Score", style = MaterialTheme.typography.labelMedium)
+                Text(score.toInt().toString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+
+    @Composable
+    fun BulletRow(text: String) {
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

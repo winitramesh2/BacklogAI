@@ -2,8 +2,11 @@ package com.backlogai.shared.network
 
 import com.backlogai.shared.models.BacklogItemCreate
 import com.backlogai.shared.models.BacklogItemResponse
+import com.backlogai.shared.models.BacklogItemGenerateV2Request
+import com.backlogai.shared.models.BacklogItemGenerateV2Response
 import com.backlogai.shared.models.BacklogItemSyncResponse
 import com.backlogai.shared.models.JiraSyncRequest
+import com.backlogai.shared.models.JiraSyncRequestV2
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -80,6 +83,34 @@ class BacklogApi(
             throw Exception("API Error ${response.status.value}: $errorBody")
         }
         
+        return response.body()
+    }
+
+    suspend fun generateBacklogItemV2(request: BacklogItemGenerateV2Request): BacklogItemGenerateV2Response {
+        val response = client.post("$baseUrl/backlog/generate/v2") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            throw Exception("API Error ${response.status.value}: $errorBody")
+        }
+
+        return response.body()
+    }
+
+    suspend fun syncToJiraV2(request: JiraSyncRequestV2): BacklogItemSyncResponse {
+        val response = client.post("$baseUrl/backlog/sync/v2") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+
+        if (!response.status.isSuccess()) {
+            val errorBody = response.bodyAsText()
+            throw Exception("API Error ${response.status.value}: $errorBody")
+        }
+
         return response.body()
     }
 }

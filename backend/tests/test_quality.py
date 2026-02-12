@@ -51,3 +51,17 @@ def test_validate_missing_acceptance_criteria():
     
     warnings = QualityValidationEngine.validate_invest(title, desc, ac, pillars)
     assert any("Missing Acceptance Criteria" in w for w in warnings)
+
+def test_validate_invest_v2_missing_metrics():
+    warnings, score = QualityValidationEngine.validate_invest_v2(
+        summary="Improve onboarding",
+        user_story="As a user, I want faster onboarding so that I can get value quickly.",
+        acceptance_criteria=[
+            "Given I sign up, When I complete the onboarding flow, Then I reach the dashboard."
+        ],
+        dependencies=[],
+        metrics=[],
+        non_functional_reqs=[]
+    )
+    assert any("Success metrics" in w for w in warnings)
+    assert score < 100

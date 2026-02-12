@@ -10,6 +10,10 @@ from app.schemas import (
     BacklogItemCreate, 
     BacklogItemResponse, 
     BacklogItemSyncResponse, 
+    BacklogItemGenerateV2Request,
+    BacklogItemGenerateV2Response,
+    ResearchSummary,
+    JiraSyncRequestV2,
     JiraSyncRequest,
     PriorityLevel, 
     PillarScores
@@ -110,6 +114,124 @@ async def generate_backlog_item(item: BacklogItemCreate):
     
     return response
 
+def _normalize_pillar_scores(scores: dict | None) -> PillarScores:
+    defaults = {
+        "user_value": 5.0,
+        "commercial_impact": 5.0,
+        "strategic_horizon": 5.0,
+        "competitive_positioning": 5.0,
+        "technical_reality": 5.0,
+    }
+    if scores:
+        defaults.update({k: v for k, v in scores.items() if v is not None})
+    return PillarScores(**defaults)
+
+@app.post("/backlog/generate/v2", response_model=BacklogItemGenerateV2Response)
+async def generate_backlog_item_v2(item: BacklogItemGenerateV2Request):
+    generated_content = await story_engine.generate_story_v2(
+        context=item.context,
+        objective=item.objective,
+        target_user=item.target_user,
+        market_segment=item.market_segment,
+        constraints=item.constraints,
+        success_metrics=item.success_metrics,
+        competitors=item.competitors_optional,
+    )
+
+    summary = generated_content.get("summary", item.objective)
+    user_story = generated_content.get("user_story", item.objective)
+    acceptance_criteria = generated_content.get("acceptance_criteria", [])
+    sub_tasks = generated_content.get("sub_tasks", [])
+    dependencies = generated_content.get("dependencies", [])
+    risks = generated_content.get("risks", [])
+    metrics = generated_content.get("metrics", [])
+    rollout_plan = generated_content.get("rollout_plan", [])
+    non_functional_reqs = generated_content.get("non_functional_reqs", [])
+
+    pillar_scores = _normalize_pillar_scores(generated_content.get("pillar_scores"))
+    priority_score, priority_level = prioritization_engine.calculate_priority(
+        pillar_scores.dict()
+    )
+
+    warnings, quality_score = quality_engine.validate_invest_v2(
+        summary=summary,
+        user_story=user_story,
+        acceptance_criteria=acceptance_criteria,
+        dependencies=dependencies,
+        metrics=metrics,
+        non_functional_reqs=non_functional_reqs,
+    )
+
+    if warnings and story_engine.client:
+        revised = await story_engine.revise_story_v2(generated_content, warnings)
+        summary = revised.get("summary", summary)
+        user_story = revised.get("user_story", user_story)
+        acceptance_criteria = revised.get("acceptance_criteria", acceptance_criteria)
+        sub_tasks = revised.get("sub_tasks", sub_tasks)
+        dependencies = revised.get("dependencies", dependencies)
+        risks = revised.get("risks", risks)
+        metrics = revised.get("metrics", metrics)
+        rollout_plan = revised.get("rollout_plan", rollout_plan)
+        non_functional_reqs = revised.get("non_functional_reqs", non_functional_reqs)
+        pillar_scores = _normalize_pillar_scores(revised.get("pillar_scores"))
+        priority_score, priority_level = prioritization_engine.calculate_priority(
+            pillar_scores.dict()
+        )
+        warnings, quality_score = quality_engine.validate_invest_v2(
+            summary=summary,
+            user_story=user_story,
+            acceptance_criteria=acceptance_criteria,
+            dependencies=dependencies,
+            metrics=metrics,
+            non_functional_reqs=non_functional_reqs,
+        )
+
+        generated_content = revised
+
+    research_summary_payload = generated_content.get("research_summary") or {}
+    research_summary = ResearchSummary(
+        trends=research_summary_payload.get("trends", []),
+        competitor_features=research_summary_payload.get("competitor_features", []),
+        differentiators=research_summary_payload.get("differentiators", []),
+        risks=research_summary_payload.get("risks", []),
+        sources=research_summary_payload.get("sources", []),
+    )
+
+    description = jira_service.build_description_template(
+        context=item.context,
+        objective=item.objective,
+        user_story=user_story,
+        acceptance_criteria=acceptance_criteria,
+        non_functional_reqs=non_functional_reqs,
+        risks=risks,
+        metrics=metrics,
+        rollout_plan=rollout_plan,
+        research_summary=research_summary,
+    )
+
+    response = BacklogItemGenerateV2Response(
+        id=uuid4(),
+        summary=summary,
+        user_story=user_story,
+        description=description,
+        acceptance_criteria=acceptance_criteria,
+        sub_tasks=sub_tasks,
+        dependencies=dependencies,
+        risks=risks,
+        metrics=metrics,
+        rollout_plan=rollout_plan,
+        non_functional_reqs=non_functional_reqs,
+        research_summary=research_summary,
+        priority_score=priority_score,
+        moscow_priority=priority_level,
+        pillar_scores=pillar_scores,
+        status="draft",
+        validation_warnings=warnings,
+        quality_score=quality_score,
+    )
+
+    return response
+
 @app.post("/backlog/sync", response_model=BacklogItemSyncResponse)
 async def sync_to_jira(request: JiraSyncRequest):
     """
@@ -123,6 +245,27 @@ async def sync_to_jira(request: JiraSyncRequest):
             issue_type=request.issue_type
         )
         
+        return BacklogItemSyncResponse(
+            id=uuid4(),
+            jira_key=jira_response["key"],
+            jira_url=jira_response["url"],
+            status="synced"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/backlog/sync/v2", response_model=BacklogItemSyncResponse)
+async def sync_to_jira_v2(request: JiraSyncRequestV2):
+    try:
+        jira_response = jira_service.create_issue_v2(
+            summary=request.summary,
+            description=request.description,
+            priority=request.priority or "Medium",
+            issue_type=request.issue_type,
+            labels=request.labels,
+            components=request.components,
+        )
+
         return BacklogItemSyncResponse(
             id=uuid4(),
             jira_key=jira_response["key"],

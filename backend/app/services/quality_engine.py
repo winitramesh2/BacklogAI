@@ -44,3 +44,68 @@ class QualityValidationEngine:
                 warnings.append("Some acceptance criteria do not follow Gherkin (Given/When/Then) format.")
                 
         return warnings
+
+    @staticmethod
+    def validate_invest_v2(
+        summary: str,
+        user_story: str,
+        acceptance_criteria: List[str],
+        dependencies: List[str],
+        metrics: List[str],
+        non_functional_reqs: List[str],
+    ) -> tuple[List[str], float]:
+        warnings: List[str] = []
+        score = 100.0
+
+        if not summary or len(summary) < 5:
+            warnings.append("Missing or weak summary.")
+            score -= 10
+        if len(summary) > 120:
+            warnings.append("Summary is too long. Consider tightening the story scope.")
+            score -= 5
+
+        if "so that" not in user_story.lower():
+            warnings.append("User story lacks clear value statement (missing 'so that').")
+            score -= 10
+
+        solution_terms = [
+            "implement", "build", "database", "endpoint", "api", "schema", "table",
+            "microservice", "backend", "frontend"
+        ]
+        if any(term in user_story.lower() for term in solution_terms):
+            warnings.append("User story is too solution-focused. Make it more negotiable.")
+            score -= 5
+
+        if not acceptance_criteria:
+            warnings.append("Missing acceptance criteria.")
+            score -= 15
+        elif len(acceptance_criteria) < 3:
+            warnings.append("Acceptance criteria are thin. Add more scenarios.")
+            score -= 8
+        elif len(acceptance_criteria) > 6:
+            warnings.append("Too many acceptance criteria for a single story.")
+            score -= 5
+
+        if acceptance_criteria:
+            invalid_gherkin = [
+                c for c in acceptance_criteria
+                if "Given" not in c or "When" not in c or "Then" not in c
+            ]
+            if invalid_gherkin:
+                warnings.append("Some acceptance criteria are not in Given/When/Then format.")
+                score -= 5
+
+        if not metrics:
+            warnings.append("Success metrics are missing. Add measurable outcomes.")
+            score -= 5
+
+        if not non_functional_reqs:
+            warnings.append("Non-functional requirements are missing.")
+            score -= 3
+
+        if dependencies and len(dependencies) > 3:
+            warnings.append("Story has many dependencies. Consider splitting for independence.")
+            score -= 5
+
+        score = max(score, 0.0)
+        return warnings, score

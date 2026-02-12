@@ -41,6 +41,13 @@ class SubTask(BaseModel):
     title: str
     description: str
 
+class ResearchSummary(BaseModel):
+    trends: List[str] = []
+    competitor_features: List[str] = []
+    differentiators: List[str] = []
+    risks: List[str] = []
+    sources: List[str] = []
+
 # --- Output Models ---
 class BacklogItemResponse(BaseModel):
     id: UUID
@@ -69,3 +76,41 @@ class JiraSyncRequest(BaseModel):
     description: str
     priority: Optional[str] = "Medium"
     issue_type: str = "Story"
+
+class BacklogItemGenerateV2Request(BaseModel):
+    project_id: Optional[UUID] = None
+    context: str = Field(..., min_length=10, description="Product context and background")
+    objective: str = Field(..., min_length=5, description="Desired outcome or objective")
+    target_user: Optional[str] = Field(None, description="Primary user persona")
+    market_segment: Optional[str] = Field(None, description="Target market or segment")
+    constraints: Optional[str] = Field(None, description="Constraints and guardrails")
+    success_metrics: Optional[str] = Field(None, description="How success will be measured")
+    competitors_optional: List[str] = Field(default=[], description="Known competitors")
+
+class BacklogItemGenerateV2Response(BaseModel):
+    id: UUID
+    summary: str
+    user_story: str
+    description: str
+    acceptance_criteria: List[str]
+    sub_tasks: List[SubTask] = []
+    dependencies: List[str] = []
+    risks: List[str] = []
+    metrics: List[str] = []
+    rollout_plan: List[str] = []
+    non_functional_reqs: List[str] = []
+    research_summary: ResearchSummary
+    priority_score: float
+    moscow_priority: PriorityLevel
+    pillar_scores: PillarScores
+    status: str
+    validation_warnings: List[str] = []
+    quality_score: float = 0.0
+
+class JiraSyncRequestV2(BaseModel):
+    summary: str
+    description: str
+    issue_type: str = "Story"
+    priority: Optional[str] = "Medium"
+    labels: List[str] = []
+    components: List[str] = []

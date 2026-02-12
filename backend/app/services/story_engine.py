@@ -3,10 +3,13 @@ import json
 from typing import List, Dict, Optional
 from openai import AsyncOpenAI
 
+from app.services.market_research_service import MarketResearchService
+
 class StoryGenerationEngine:
     def __init__(self):
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.client = AsyncOpenAI(api_key=self.api_key) if self.api_key else None
+        self.research_service = MarketResearchService()
     
     async def generate_story(
         self, 
@@ -88,4 +91,155 @@ class StoryGenerationEngine:
                 {"title": "Implement Backend API", "description": "Endpoints for " + title},
                 {"title": "Unit Testing", "description": "Verify logic for " + title}
             ]
+        }
+
+    async def generate_story_v2(
+        self,
+        context: str,
+        objective: str,
+        target_user: Optional[str],
+        market_segment: Optional[str],
+        constraints: Optional[str],
+        success_metrics: Optional[str],
+        competitors: List[str],
+    ) -> Dict:
+        if not self.client:
+            return self._mock_generation_v2(context, objective, target_user)
+
+        research_inputs = await self.research_service.fetch_research_inputs(
+            objective=objective,
+            market_segment=market_segment,
+            competitors=competitors,
+        )
+
+        system_prompt = """
+        You are an expert Product Manager and Business Analyst.
+        Your task is to turn a product context and objective into an INVEST-compliant JIRA-ready story.
+        Use the market research inputs to include trends and competitive insights.
+
+        Return JSON only in this exact schema:
+        {
+          "summary": "Short action-oriented summary",
+          "user_story": "As a [persona], I want [goal] so that [benefit].",
+          "acceptance_criteria": ["Given... When... Then..."],
+          "sub_tasks": [{"title": "Task", "description": "Details"}],
+          "dependencies": ["Dependency"],
+          "risks": ["Risk"],
+          "metrics": ["Metric"],
+          "rollout_plan": ["Step"],
+          "non_functional_reqs": ["NFR"],
+          "research_summary": {
+            "trends": ["Trend"],
+            "competitor_features": ["Feature"],
+            "differentiators": ["Differentiator"],
+            "risks": ["Risk"],
+            "sources": ["URL"]
+          },
+          "pillar_scores": {
+            "user_value": 0,
+            "commercial_impact": 0,
+            "strategic_horizon": 0,
+            "competitive_positioning": 0,
+            "technical_reality": 0
+          }
+        }
+
+        Requirements:
+        - Ensure the story is small, testable, and negotiable.
+        - Use 3-6 acceptance criteria in Gherkin format.
+        - Keep lists concise (max 6 items each).
+        - If research inputs are missing, make reasonable assumptions and say "insufficient research" in research_summary.trends.
+        """
+
+        user_prompt = f"""
+        Context: {context}
+        Objective: {objective}
+        Target User: {target_user or "Not specified"}
+        Market Segment: {market_segment or "Not specified"}
+        Constraints: {constraints or "None"}
+        Success Metrics: {success_metrics or "Not specified"}
+        Known Competitors: {', '.join(competitors) if competitors else "Not specified"}
+
+        Research Queries: {', '.join(research_inputs.get('queries', [])) or "None"}
+        Research Snippets: {research_inputs.get('snippets', [])}
+        Research Sources: {research_inputs.get('sources', [])}
+        """
+
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+            content = response.choices[0].message.content
+            return json.loads(content)
+        except Exception as e:
+            print(f"AI Generation Error (v2): {e}")
+            return self._mock_generation_v2(context, objective, target_user)
+
+    async def revise_story_v2(self, draft: Dict, warnings: List[str]) -> Dict:
+        if not self.client:
+            return draft
+
+        system_prompt = """
+        You are an expert Product Manager. Revise the draft story to address the warnings.
+        Keep the same JSON schema and improve INVEST compliance.
+        Return JSON only.
+        """
+
+        user_prompt = f"""
+        Warnings: {warnings}
+        Draft JSON: {json.dumps(draft)}
+        """
+
+        try:
+            response = await self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"}
+            )
+            content = response.choices[0].message.content
+            return json.loads(content)
+        except Exception as e:
+            print(f"AI Revision Error (v2): {e}")
+            return draft
+
+    def _mock_generation_v2(self, context: str, objective: str, target_user: Optional[str]) -> Dict:
+        persona = target_user or "user"
+        return {
+            "summary": objective[:80],
+            "user_story": f"As a {persona}, I want {objective.lower()} so that I can achieve the desired outcome.",
+            "acceptance_criteria": [
+                "Given I have access to the product, When I complete the primary flow, Then the objective is met.",
+                "Given invalid inputs, When I attempt the action, Then I see a clear error message."
+            ],
+            "sub_tasks": [
+                {"title": "Design UX flow", "description": "Define screens and interactions"},
+                {"title": "Implement API changes", "description": "Add endpoints for the new flow"}
+            ],
+            "dependencies": [],
+            "risks": ["Insufficient research"],
+            "metrics": ["Adoption rate", "Task completion"],
+            "rollout_plan": ["Internal QA", "Limited beta", "Full release"],
+            "non_functional_reqs": ["Performance under expected load"],
+            "research_summary": {
+                "trends": ["insufficient research"],
+                "competitor_features": [],
+                "differentiators": [],
+                "risks": ["insufficient research"],
+                "sources": []
+            },
+            "pillar_scores": {
+                "user_value": 5,
+                "commercial_impact": 5,
+                "strategic_horizon": 5,
+                "competitive_positioning": 5,
+                "technical_reality": 5
+            }
         }
