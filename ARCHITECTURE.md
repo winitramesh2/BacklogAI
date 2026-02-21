@@ -63,6 +63,8 @@ Key notes:
 - The v2 flow starts with context + objective, then runs research, generation, and quality checks.
 - SerpAPI is rate-limited and cached to respect the free tier and reduce costs.
 - If OpenAI is unavailable, a deterministic fallback uses SerpAPI summaries to populate research fields.
+- Slack command handling uses an ack-first pattern to respond quickly and open modal work asynchronously.
+- Jira URL normalization handles local runtime differences when `host.docker.internal` is not resolvable.
 
 ---
 
@@ -152,6 +154,7 @@ Slack is introduced as an additional client channel, equivalent to Android/iOS/m
   - `POST /slack/commands`
   - `POST /slack/interactions`
   - `POST /slack/events` (optional for later expansion)
+  - Command endpoint returns immediate ACK to satisfy Slack timeout constraints.
 - Slack Service Layer:
   - Signature validation
   - Modal parsing/mapping to v2 request model
@@ -161,6 +164,9 @@ Slack is introduced as an additional client channel, equivalent to Android/iOS/m
 - Slack Session State Store:
   - Tracks generated preview state and sync status
   - Prevents duplicate Jira ticket creation on repeated sync actions
+- Jira Connectivity Reliability:
+  - Normalizes Docker host aliases to `localhost` when backend runs directly on host runtime
+  - Preserves Docker alias URL when hostname resolves in containerized runtime
 - Secure Connectivity:
   - Cloudflare Tunnel for HTTPS callback routing to local services (`localhost` ingress)
   - Service mode support for roaming environments (Wi-Fi/hotspot switches)

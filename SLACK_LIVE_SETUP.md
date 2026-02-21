@@ -168,3 +168,12 @@ Confirms Slack -> BacklogAI -> Jira integration works end-to-end.
 - **Tunnel URL changed**
   - Update Slack command and interactivity URLs with the new tunnel URL
   - Use quick checklist: [`SLACK_QUICK_TUNNEL_CHECKLIST.md`](./SLACK_QUICK_TUNNEL_CHECKLIST.md)
+
+- **`/backlogai` shows `dispatch_unknown_error`**
+  - Most common cause is stale callback URL in Slack app config
+  - Re-check both URLs point to current tunnel host:
+    - `/slack/commands`
+    - `/slack/interactions`
+  - Verify endpoint behavior from browser/CLI:
+    - `GET` should return `405`
+    - unsigned `POST` should return `401`

@@ -6,6 +6,7 @@
 ![Status](https://img.shields.io/badge/Status-In%20Development-yellow?style=for-the-badge)
 ![Tech](https://img.shields.io/badge/Stack-Python%20|%20FastAPI%20|%20Kotlin%20Multiplatform-blue?style=for-the-badge)
 ![AI](https://img.shields.io/badge/Powered%20By-OpenAI%20%2F%20Claude-green?style=for-the-badge)
+![Slack](https://img.shields.io/badge/Slack%20Channel-Live-brightgreen?style=for-the-badge)
 
 ---
 
@@ -63,7 +64,7 @@ graph LR
 3.  **Output:**
     *   JIRA-ready description with research summary, NFRs, metrics, risks, and rollout plan.
     *   Direct sync to JIRA.
-    *   Cross-platform UI (Android + iOS implemented).
+    *   Cross-platform UI (Android + iOS + macOS) and Slack client channel.
 
 ---
 
@@ -109,15 +110,28 @@ To run BackLogAI effectively, you need to configure external services in your `.
     - Health check: `GET /health`
     - Generation check: `POST /backlog/generate/v2`
 
+### 4.1 Latest Demo Assets (v3)
+*   **Android + macOS (combined):**
+    - Video: [`demo/e2e-v3/macos-android-demo-v3.mov`](./demo/e2e-v3/macos-android-demo-v3.mov)
+    - Screenshot: [`demo/e2e-v3/macos-android-v3.png`](./demo/e2e-v3/macos-android-v3.png)
+*   **Slack end-to-end:**
+    - Video: [`demo/slack-e2e-v3/slack-backlogai-e2e-demo.mov`](./demo/slack-e2e-v3/slack-backlogai-e2e-demo.mov)
+    - Screenshots:
+      - [`demo/slack-e2e-v3/slack-backlogai-bot_1.png`](./demo/slack-e2e-v3/slack-backlogai-bot_1.png)
+      - [`demo/slack-e2e-v3/slack-backlogai-bot_2.png`](./demo/slack-e2e-v3/slack-backlogai-bot_2.png)
+      - [`demo/slack-e2e-v3/slack-backlogai-bot_3.png`](./demo/slack-e2e-v3/slack-backlogai-bot_3.png)
+
 ### 5. Slack Integration (Client Channel)
 *   **Integration Model:** Slack works as an additional client channel, allowing users to submit inputs, review Story Preview, and trigger Jira sync directly from Slack.
 *   **Business Value:** This reduces context switching and enables backlog collaboration where teams already communicate.
+*   **Status:** ✅ End-to-end flow is live and validated.
 *   **Setup Summary:**
     - Create a Slack app with **Slash Commands** + **Interactivity** and scopes `chat:write`, `commands` (optional: `channels:history`, `users:read`).
     - Configure callback endpoints:
       - Slash command: 📋 `https://<public-backlogai-host>/slack/commands`
       - Interactivity: 📋 `https://<public-backlogai-host>/slack/interactions`
-    - Keep connectivity secure with tunnel + Zero Trust policies and Slack bypass rules for Jira Slack endpoints.
+    - For local demo: use Cloudflare quick tunnel.
+    - For production hardening: add Zero Trust policies and Slack bypass rules for Jira Slack endpoints.
     - Keep Jira linked using the public Jira base URL.
 *   **Set Env:** (📋 copy into `.env`)
     ```properties
@@ -126,6 +140,9 @@ To run BackLogAI effectively, you need to configure external services in your `.
     SLACK_INTEGRATION_ENABLED=true
     ```
 *   **Runtime Flow:** `/backlogai` -> input modal -> Story Preview -> **Sync to JIRA** -> Jira key + URL posted to Slack.
+*   **Setup Docs:**
+    - Live guide: [`SLACK_LIVE_SETUP.md`](./SLACK_LIVE_SETUP.md)
+    - Quick tunnel rotation checklist: [`SLACK_QUICK_TUNNEL_CHECKLIST.md`](./SLACK_QUICK_TUNNEL_CHECKLIST.md)
 
 ---
 

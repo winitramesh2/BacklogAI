@@ -4,7 +4,7 @@
 
 This document tracks the development progress of the **BackLogAI** project.
 
-**Current Phase:** Phase 7 (Slack Integration) 🚧
+**Current Phase:** Phase 7 (Slack Integration) ✅ Completed
 
 ---
 
@@ -115,30 +115,28 @@ This document tracks the development progress of the **BackLogAI** project.
 
 ## 💬 Phase 7: Slack Client Integration
 **Goal:** Add Slack as a new client channel for story generation and Jira sync without impacting Android/iOS/macOS behavior.
-**Status:** ![Status](https://img.shields.io/badge/Planned-blue?style=flat-square)
+**Status:** ![Status](https://img.shields.io/badge/Completed-green?style=flat-square)
 
-- [ ] **Slack App & Connectivity**
-    - [ ] Create Slack app with scopes (`chat:write`, `commands`, interactivity).
-    - [ ] Configure command and interaction callback URLs.
-    - [ ] Setup secure tunnel (Cloudflare Tunnel) to local backend endpoint.
-    - [ ] Validate Slack request signature verification and timestamp replay checks.
+- [x] **Slack App & Connectivity**
+    - [x] Create Slack app with scopes (`chat:write`, `commands`, interactivity).
+    - [x] Configure command and interaction callback URLs.
+    - [x] Setup secure tunnel (Cloudflare Tunnel) to local backend endpoint.
+    - [x] Validate Slack request signature verification and timestamp replay checks.
 
-- [ ] **Secure Connectivity (Roaming-Safe Tunnel Setup)**
-    - [ ] Install `cloudflared` on host machine.
-    - [ ] Authenticate tunnel client (`cloudflared tunnel login`).
-    - [ ] Create tunnel and store tunnel ID (`cloudflared tunnel create <name>`).
-    - [ ] Route tunnel DNS to public hostnames (`cloudflared tunnel route dns ...`).
-    - [ ] Configure ingress to local services via `localhost` targets (stable across Wi-Fi/hotspot changes).
-    - [ ] Install tunnel as background service:
-        - [ ] macOS: `sudo cloudflared service install` + `sudo launchctl start com.cloudflare.cloudflared`
-        - [ ] Windows: `cloudflared service install` + `Start-Service cloudflared`
+- [x] **Secure Connectivity (Quick Tunnel for Live Local Demo)**
+    - [x] Install `cloudflared` on host machine.
+    - [x] Start quick tunnel for BacklogAI callback host.
+    - [x] Start quick tunnel for Jira host access.
+    - [x] Validate callback behavior (`405` on GET, `401` on unsigned POST).
+    - [x] Document URL rotation procedure in `SLACK_QUICK_TUNNEL_CHECKLIST.md`.
 
-- [ ] **Zero Trust Security Policies**
+- [ ] **Production Hardening (Deferred)**
+    - [ ] Migrate from quick tunnels to named tunnel + stable DNS.
     - [ ] Create Cloudflare Access self-hosted app for Jira public hostname.
     - [ ] Add primary allow policy (team email domain allow-list).
     - [ ] Confirm authenticated users can access Jira through protected URL.
 
-- [ ] **Slack Bypass Policy for Jira Endpoints**
+- [ ] **Slack Bypass Policy for Jira Endpoints (Deferred)**
     - [ ] Add bypass policy for Jira Slack integration path: `/rest/slack/latest/*`.
     - [ ] Add Slack source IP ranges:
         - [ ] `3.23.0.0/14`
@@ -149,33 +147,39 @@ This document tracks the development progress of the **BackLogAI** project.
         - [ ] `54.64.0.0/13`
     - [ ] Ensure bypass policy priority is above team access allow policy.
 
-- [ ] **Jira + Slack Finalization**
-    - [ ] Update Jira Base URL to the public protected hostname.
-    - [ ] Install official Jira Server Slack app in workspace.
-    - [ ] Complete account linking from Slack to Jira using public URL.
+- [x] **Jira + Slack Finalization (Local Runtime)**
+    - [x] Keep Jira on local runtime and validate issue creation through Slack flow.
+    - [x] Add Jira URL host fallback for local non-Docker backend runtime.
+    - [x] Confirm repeated Slack sync clicks do not create duplicate Jira issues.
 
-- [ ] **Backend Slack Adapter Layer**
+- [x] **Backend Slack Adapter Layer**
     - [x] Implement `POST /slack/commands` (launch input modal).
     - [x] Implement `POST /slack/interactions` (modal submit + action buttons).
     - [x] Add modal key/value parser mapped to `BacklogItemGenerateV2Request`.
     - [x] Build Slack Block Kit responses for Story Preview and actions.
+    - [x] Add non-blocking command ACK path to avoid Slack `dispatch_unknown_error`.
 
-- [ ] **Story Preview & Jira Sync Flow**
+- [x] **Story Preview & Jira Sync Flow**
     - [x] Generate Story Preview using existing v2 generation pipeline.
     - [x] Post preview message back to Slack channel.
     - [x] Implement "Sync to JIRA" action path reusing existing Jira sync service.
     - [x] Post Jira ticket key and URL back to Slack after successful sync.
 
-- [ ] **State, Idempotency & Reliability**
+- [x] **State, Idempotency & Reliability**
     - [x] Persist Slack session state (input payload, preview payload, sync status).
     - [x] Prevent duplicate Jira tickets on repeated sync actions.
     - [x] Return existing Jira key/URL for repeated sync clicks.
 
-- [ ] **Validation & Regression**
-    - [ ] Validate end-to-end Slack flow: input -> preview -> sync -> Jira response.
+- [x] **Validation & Regression**
+    - [x] Validate end-to-end Slack flow: input -> preview -> sync -> Jira response.
     - [x] Add tests for signature validation, payload mapping, and idempotency.
-    - [ ] Re-verify Android/iOS/macOS flows remain unchanged.
+    - [x] Re-verify Android/iOS/macOS flows remain unchanged.
 
-- [ ] **Scope Note**
+- [x] **Scope Note**
     - [x] Existing clients remain active: Android, iOS, macOS Desktop.
     - [x] Windows client support remains upcoming and unaffected by Slack rollout.
+
+- [x] **Documentation & Demos**
+    - [x] Publish Slack live setup guide and quick tunnel checklist.
+    - [x] Update implementation and architecture docs for Slack runtime behavior.
+    - [x] Add v3 demo assets for Slack and client app flows under `demo/`.
