@@ -30,14 +30,22 @@ Without callback URLs, Slack cannot reach your backend.
    - Enter app name (for example: `BacklogAI Bot`)
    - Select your workspace and click **Create App**
 3. Select your Slack app
-4. Go to **Slash Commands**
-   - Create/edit command: `/backlogai`
+4. In the app settings page, use this navigation path:
+   - **Left Sidebar** -> **Features** -> **Slash Commands**
+   - If you cannot find it, scroll the sidebar and expand **Features**
+5. In **Slash Commands**:
+   - Click **Create New Command** (or edit existing)
+   - Command: `/backlogai`
+   - Short description: `Generate backlog story preview`
+   - Usage hint: `opens input modal`
    - Request URL:
      - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com/slack/commands`
-5. Go to **Interactivity & Shortcuts**
+   - Click **Save**
+6. In the left sidebar, open **Interactivity & Shortcuts**
    - Enable Interactivity
    - Request URL:
      - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com/slack/interactions`
+   - Click **Save Changes**
 
 ---
 
@@ -139,6 +147,12 @@ Confirms Slack -> BacklogAI -> Jira integration works end-to-end.
 - **Invalid Slack signature**
   - Check `SLACK_SIGNING_SECRET`
   - Confirm Slack callbacks hit the same tunnel URL configured in app settings
+
+- **Cannot find Slash Commands panel**
+  - Open your app at `https://api.slack.com/apps`
+  - Select your app first (panel appears only inside an app)
+  - In left sidebar, expand **Features** and choose **Slash Commands**
+  - If needed, refresh browser after app creation
 
 - **Command works but no preview**
   - Check backend logs: `/tmp/backlogai-backend-8001.log`
