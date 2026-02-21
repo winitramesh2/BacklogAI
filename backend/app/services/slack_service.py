@@ -51,8 +51,28 @@ class SlackService:
             resp.raise_for_status()
             data = resp.json()
             if not data.get("ok", False):
-                raise RuntimeError(f"Slack API error ({endpoint}): {data.get('error', 'unknown')} ")
+                raise RuntimeError(f"Slack API error ({endpoint}): {data.get('error', 'unknown')}")
             return data
+
+    async def _try_join_channel(self, channel_id: str) -> None:
+        await self._api_post("conversations.join", {"channel": channel_id})
+
+    async def _post_message_with_retry(self, channel_id: str, text: str, blocks: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "channel": channel_id,
+            "text": text,
+        }
+        if blocks:
+            payload["blocks"] = blocks
+
+        try:
+            return await self._api_post("chat.postMessage", payload)
+        except RuntimeError as exc:
+            if "not_in_channel" in str(exc):
+                # Works for public channels when bot has appropriate scopes.
+                await self._try_join_channel(channel_id)
+                return await self._api_post("chat.postMessage", payload)
+            raise
 
     async def open_input_modal(self, trigger_id: str, channel_id: str, user_id: str) -> None:
         view = {
@@ -230,18 +250,18 @@ class SlackService:
             },
         ]
 
-        payload = {
-            "channel": channel_id,
-            "text": "BacklogAI Story Preview",
-            "blocks": blocks,
-        }
-        return await self._api_post("chat.postMessage", payload)
+        return await self._post_message_with_retry(
+            channel_id=channel_id,
+            text="BacklogAI Story Preview",
+            blocks=blocks,
+        )
 
     async def post_sync_success(self, channel_id: str, jira_key: str, jira_url: str) -> Dict[str, Any]:
         text = f"JIRA ticket created: *{jira_key}*\n<{jira_url}|Open ticket>"
-        payload = {"channel": channel_id, "text": text}
-        return await self._api_post("chat.postMessage", payload)
+        return await self._post_message_with_retry(channel_id=channel_id, text=text)
 
     async def post_error(self, channel_id: str, message: str) -> Dict[str, Any]:
-        payload = {"channel": channel_id, "text": f"BacklogAI error: {message}"}
-        return await self._api_post("chat.postMessage", payload)
+        return await self._post_message_with_retry(
+            channel_id=channel_id,
+            text=f"BacklogAI error: {message}",
+        )
