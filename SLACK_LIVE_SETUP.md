@@ -139,3 +139,4 @@ Confirms Slack -> BacklogAI -> Jira integration works end-to-end.
 
 - **Tunnel URL changed**
   - Update Slack command and interactivity URLs with the new tunnel URL
+  - Use quick checklist: [`SLACK_QUICK_TUNNEL_CHECKLIST.md`](./SLACK_QUICK_TUNNEL_CHECKLIST.md)
