@@ -11,8 +11,9 @@ graph TD
   subgraph Clients
     A1[Android App]
     A2[iOS App]
-    A3[Desktop App]
-    A4[Slack Client]
+    A3[macOS Desktop App]
+    A4[Windows Desktop App]
+    A5[Slack Client]
   end
 
   subgraph Backend
@@ -40,7 +41,8 @@ graph TD
   A1 --> B1
   A2 --> B1
   A3 --> B1
-  A4 --> C4
+  A4 --> B1
+  A5 --> C4
   C4 --> S1
   S1 --> B7
   S2 --> C3
@@ -65,6 +67,7 @@ Key notes:
 - If OpenAI is unavailable, a deterministic fallback uses SerpAPI summaries to populate research fields.
 - Slack command handling uses an ack-first pattern to respond quickly and open modal work asynchronously.
 - Jira URL normalization handles local runtime differences when `host.docker.internal` is not resolvable.
+- Compose Desktop `desktopMain` powers both macOS and Windows clients from a shared code path.
 
 ---
 
@@ -93,7 +96,7 @@ flowchart TD
   E -->|Warnings| F[Revise pass]
   F --> D
   E -->|OK| G[Prioritization + response]
-  G --> H[User reviews on mobile]
+  G --> H[User reviews on client app]
   H --> I[Sync to JIRA: /backlog/sync/v2]
 ```
 
@@ -141,10 +144,10 @@ sequenceDiagram
 ## 5) SLACK Integration
 
 ### Architectural Position
-Slack is introduced as an additional client channel, equivalent to Android/iOS/macOS clients, routed through backend adapter endpoints.
+Slack is introduced as an additional client channel, equivalent to Android/iOS/macOS/Windows clients, routed through backend adapter endpoints.
 
 ### Design Goals
-- Preserve existing mobile/desktop flows without modification.
+- Preserve existing Android/iOS/macOS flows while introducing Windows desktop support.
 - Reuse existing v2 story generation and Jira sync services.
 - Keep local Jira and local backend runtime unchanged.
 - Enable secure remote Slack access through outbound tunnel only.
@@ -221,7 +224,7 @@ sequenceDiagram
 
 ### Non-Impact Statement
 No changes are required to existing client APIs for Android, iOS, and macOS desktop.
-Slack integration is implemented as an additive client adapter layer.
+Windows desktop rollout and Slack integration are additive channels over the same backend API contracts.
 
 ---
 
@@ -237,7 +240,7 @@ Slack integration is implemented as an additive client adapter layer.
 ### Frontend (Kotlin Multiplatform)
 - Compose Multiplatform UI
 - Ktor Client for networking
-- Android + iOS + Desktop host apps
+- Android + iOS + Desktop host apps (macOS + Windows)
 
 ### Tooling
 - Gradle for builds

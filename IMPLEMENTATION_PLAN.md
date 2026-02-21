@@ -4,7 +4,7 @@
 
 This document tracks the development progress of the **BackLogAI** project.
 
-**Current Phase:** Phase 7 (Slack Integration) ✅ Completed
+**Current Phase:** Phase 8 (Windows Client) 🚧 In Progress
 
 ---
 
@@ -177,9 +177,48 @@ This document tracks the development progress of the **BackLogAI** project.
 
 - [x] **Scope Note**
     - [x] Existing clients remain active: Android, iOS, macOS Desktop.
-    - [x] Windows client support remains upcoming and unaffected by Slack rollout.
+    - [x] Windows client rollout is tracked separately in Phase 8.
 
 - [x] **Documentation & Demos**
     - [x] Publish Slack live setup guide and quick tunnel checklist.
     - [x] Update implementation and architecture docs for Slack runtime behavior.
     - [x] Add v3 demo assets for Slack and client app flows under `demo/`.
+
+---
+
+## 🪟 Phase 8: Windows Client (Compose Desktop)
+**Goal:** Deliver a modern Windows desktop client with end-to-end story generation and Jira sync using Kotlin Multiplatform + Compose.
+**Status:** ![Status](https://img.shields.io/badge/In%20Progress-orange?style=flat-square)
+
+- [x] **Planning & Scope Baseline**
+    - [x] Confirm architecture path: reuse `desktopMain` Compose codebase.
+    - [x] Define distribution strategy: MSI installer + portable ZIP.
+    - [x] Document Phase 8 plan in project roadmap.
+
+- [ ] **Windows Runtime UX Modernization**
+    - [ ] Improve desktop window defaults (initial size, minimum size, usability baseline).
+    - [ ] Refine desktop-friendly spacing and readability in Input/Result screens.
+    - [ ] Add clear desktop interaction feedback for generate/sync states.
+
+- [ ] **Windows Packaging & Distribution**
+    - [ ] Build Windows installer artifact (`.msi`) using Compose Desktop distribution tasks.
+    - [ ] Build portable Windows ZIP package for no-installation usage.
+    - [ ] Publish Windows binaries under `demo/binaries-v3/windows/`.
+
+- [ ] **Windows End-to-End Validation**
+    - [ ] Validate flow on Windows runtime: health -> generate v2 -> sync v2.
+    - [ ] Verify error handling UX (API unavailable, sync failures, retry behavior).
+    - [ ] Capture Windows demo assets under `demo/windows-e2e-v3/`.
+
+- [ ] **Cross-Platform Regression**
+    - [ ] Re-verify Android, iOS, and macOS behaviors remain unchanged.
+    - [ ] Re-verify Slack client flow remains stable after desktop updates.
+
+- [x] **Documentation Track (Initial)**
+    - [x] Update README support matrix to reflect Windows in-progress status.
+    - [x] Add Windows setup and release checklist docs.
+    - [x] Add architecture notes for shared desktop path (macOS + Windows).
+
+- [ ] **Documentation Track (Completion)**
+    - [ ] Mark Windows client as live after successful E2E validation.
+    - [ ] Link final Windows demos and binaries in README.
