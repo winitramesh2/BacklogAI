@@ -121,24 +121,7 @@ sequenceDiagram
 
 ---
 
-## 5) Technology Stack
-
-### Backend
-- Python 3.11+ with FastAPI
-- OpenAI API for story generation
-- SerpAPI for market research
-- Jira REST API for issue creation
-
-### Frontend (Kotlin Multiplatform)
-- Compose Multiplatform UI
-- Ktor Client for networking
-- Android + iOS host apps
-
-### Tooling
-- Gradle for builds
-- Docker Compose for local services
-
-## SLACK Integration
+## 5) SLACK Integration
 
 ### Architectural Position
 Slack is introduced as an additional client channel, equivalent to Android/iOS/macOS clients, routed through backend adapter endpoints.
@@ -158,9 +141,13 @@ Slack is introduced as an additional client channel, equivalent to Android/iOS/m
   - Signature validation
   - Modal parsing/mapping to v2 request model
   - Preview message and action block rendering
+  - Slack Web API message posting
+  - Block Kit composition for Story Preview and action buttons
 - Slack Session State Store:
   - Tracks generated preview state and sync status
   - Prevents duplicate Jira ticket creation on repeated sync actions
+- Secure Connectivity:
+  - Cloudflare Tunnel for HTTPS callback routing to local services
 
 ### Sequence Flow
 
@@ -198,3 +185,25 @@ sequenceDiagram
 ### Non-Impact Statement
 No changes are required to existing client APIs for Android, iOS, and macOS desktop.
 Slack integration is implemented as an additive client adapter layer.
+
+---
+
+## 6) Technology Stack
+
+### Backend
+- Python 3.11+ with FastAPI
+- OpenAI API for story generation
+- SerpAPI for market research
+- Jira REST API for issue creation
+- Slack Web API + interaction webhooks for Slack client flow
+
+### Frontend (Kotlin Multiplatform)
+- Compose Multiplatform UI
+- Ktor Client for networking
+- Android + iOS + Desktop host apps
+
+### Tooling
+- Gradle for builds
+- Docker Compose for local services
+- Cloudflare Tunnel (`cloudflared`) for secure local-to-cloud webhook routing
+- Slack Block Kit for rich interactive Slack UX

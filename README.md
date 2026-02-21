@@ -94,6 +94,26 @@ To run BackLogAI effectively, you need to configure external services in your `.
     JIRA_PROJECT_KEY=KAN
     ```
 
+### 4. Slack Integration (Client Channel)
+*   **Integration Model:** Slack is added as an additional client channel (not MCP-based) and reuses the same backend generation + Jira sync pipeline.
+*   **Slack App:** Create an app in your workspace and enable **Slash Commands** + **Interactivity**.
+*   **Required Scopes:**
+    - `chat:write`
+    - `commands`
+    - `channels:history` (optional)
+    - `users:read` (optional)
+*   **Request URLs:**
+    - Slash command URL: `https://<public-backlogai-host>/slack/commands`
+    - Interactivity URL: `https://<public-backlogai-host>/slack/interactions`
+*   **Recommended Connectivity:** Use Cloudflare Tunnel to securely expose local BacklogAI endpoints to Slack over HTTPS without opening inbound firewall ports.
+*   **Set Env:**
+    ```properties
+    SLACK_BOT_TOKEN=xoxb-...
+    SLACK_SIGNING_SECRET=...
+    SLACK_INTEGRATION_ENABLED=true
+    ```
+*   **Slack Flow:** `/backlogai` -> input modal (key/value fields) -> Story Preview in Slack -> **Sync to JIRA** -> Jira key + URL posted back to Slack.
+
 ---
 
 ## 🏗️ Architecture & Tech Stack
@@ -118,60 +138,3 @@ See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for the phased developmen
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## SLACK Integration
-
-### Overview
-BacklogAI can be used from Slack as an additional client channel alongside Android, iOS, and macOS desktop.
-This integration is additive and does not replace or alter existing clients.
-
-### Important
-- This integration is **not MCP-based**.
-- Slack is cloud-hosted; no local Slack server is required.
-- Existing local services on this machine (BacklogAI backend, Jira, Docker services) remain **as-is**.
-- Slack callbacks reach local services through a secure outbound tunnel.
-
-### Prerequisites
-- A Slack App in your workspace.
-- Cloudflare Tunnel (`cloudflared`) configured on this machine.
-- Existing local BacklogAI backend running unchanged.
-- Existing local Jira running unchanged.
-- Public HTTPS tunnel routes mapped to local services without changing local ports.
-
-### Slack App Requirements
-- OAuth scopes:
-  - `chat:write`
-  - `commands`
-  - `channels:history` (optional)
-  - `users:read` (optional)
-- Slash command:
-  - `/backlogai`
-- Interactivity enabled:
-  - Request URL points to BacklogAI Slack interaction endpoint.
-
-### User Flow in Slack
-1. User runs `/backlogai`.
-2. Slack modal collects key/value inputs:
-   - Context (required)
-   - Objective (required)
-   - Target User
-   - Market Segment
-   - Constraints
-   - Success Metrics
-   - Competitors
-3. BacklogAI generates **Story Preview** and posts it back to Slack.
-4. User clicks **Sync to JIRA**.
-5. BacklogAI creates Jira ticket using existing Jira integration logic.
-6. Slack receives Jira ticket key and URL.
-
-### Security
-- Slack request signature validation is enforced.
-- Replay protection is enforced with timestamp checks.
-- Tunnel remains outbound-only; no inbound firewall ports are opened.
-
-### Compatibility Guarantee
-Slack integration is implemented as a separate adapter layer and does not alter:
-- Android flow
-- iOS flow
-- macOS desktop flow
-- Existing `/backlog/generate/v2` and `/backlog/sync/v2` behavior
