@@ -63,24 +63,71 @@ class SlackService:
             "close": {"type": "plain_text", "text": "Cancel"},
             "private_metadata": json.dumps({"channel_id": channel_id, "user_id": user_id}),
             "blocks": [
-                self._input_block("context", "Context", True, multiline=True),
-                self._input_block("objective", "Objective", True, multiline=True),
-                self._input_block("target_user", "Target User", False),
-                self._input_block("market_segment", "Market Segment", False),
-                self._input_block("constraints", "Constraints", False, multiline=True),
-                self._input_block("success_metrics", "Success Metrics", False, multiline=True),
-                self._input_block("competitors", "Competitors (comma-separated)", False),
+                self._input_block(
+                    "context",
+                    "Context",
+                    True,
+                    multiline=True,
+                    placeholder="Describe product background and user problem",
+                ),
+                self._input_block(
+                    "objective",
+                    "Objective",
+                    True,
+                    multiline=True,
+                    placeholder="State the desired outcome",
+                ),
+                self._input_block(
+                    "target_user",
+                    "Target User",
+                    False,
+                    placeholder="Example: Product Manager",
+                ),
+                self._input_block(
+                    "market_segment",
+                    "Market Segment",
+                    False,
+                    placeholder="Example: B2B SaaS",
+                ),
+                self._input_block(
+                    "constraints",
+                    "Constraints",
+                    False,
+                    multiline=True,
+                    placeholder="List technical or business constraints",
+                ),
+                self._input_block(
+                    "success_metrics",
+                    "Success Metrics",
+                    False,
+                    multiline=True,
+                    placeholder="Define measurable success outcomes",
+                ),
+                self._input_block(
+                    "competitors",
+                    "Competitors (comma-separated)",
+                    False,
+                    placeholder="Example: Linear, Productboard",
+                ),
             ],
         }
         await self._api_post("views.open", {"trigger_id": trigger_id, "view": view})
 
     @staticmethod
-    def _input_block(action_id: str, label: str, required: bool, multiline: bool = False) -> Dict[str, Any]:
+    def _input_block(
+        action_id: str,
+        label: str,
+        required: bool,
+        multiline: bool = False,
+        placeholder: Optional[str] = None,
+    ) -> Dict[str, Any]:
         element = {
             "type": "plain_text_input",
             "action_id": action_id,
             "multiline": multiline,
         }
+        if placeholder:
+            element["placeholder"] = {"type": "plain_text", "text": placeholder}
         return {
             "type": "input",
             "block_id": action_id,
