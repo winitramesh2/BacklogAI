@@ -4,9 +4,12 @@ Use this only when the `trycloudflare.com` URL changes.
 
 ## When the URL changes
 Quick tunnel URLs can change when:
+- machine restart or user logout/login (tunnel process restarts)
 - `cloudflared` process is restarted or crashed
 - laptop/network reconnect causes tunnel process restart
 - you manually start a new quick tunnel session
+
+> Quick note: `trycloudflare.com` quick tunnels are ephemeral by design. For stable URLs across restarts, use a named tunnel with your own domain.
 
 ## Get the new URL fast
 Run:
