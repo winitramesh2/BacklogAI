@@ -123,6 +123,37 @@ This document tracks the development progress of the **BackLogAI** project.
     - [ ] Setup secure tunnel (Cloudflare Tunnel) to local backend endpoint.
     - [ ] Validate Slack request signature verification and timestamp replay checks.
 
+- [ ] **Secure Connectivity (Roaming-Safe Tunnel Setup)**
+    - [ ] Install `cloudflared` on host machine.
+    - [ ] Authenticate tunnel client (`cloudflared tunnel login`).
+    - [ ] Create tunnel and store tunnel ID (`cloudflared tunnel create <name>`).
+    - [ ] Route tunnel DNS to public hostnames (`cloudflared tunnel route dns ...`).
+    - [ ] Configure ingress to local services via `localhost` targets (stable across Wi-Fi/hotspot changes).
+    - [ ] Install tunnel as background service:
+        - [ ] macOS: `sudo cloudflared service install` + `sudo launchctl start com.cloudflare.cloudflared`
+        - [ ] Windows: `cloudflared service install` + `Start-Service cloudflared`
+
+- [ ] **Zero Trust Security Policies**
+    - [ ] Create Cloudflare Access self-hosted app for Jira public hostname.
+    - [ ] Add primary allow policy (team email domain allow-list).
+    - [ ] Confirm authenticated users can access Jira through protected URL.
+
+- [ ] **Slack Bypass Policy for Jira Endpoints**
+    - [ ] Add bypass policy for Jira Slack integration path: `/rest/slack/latest/*`.
+    - [ ] Add Slack source IP ranges:
+        - [ ] `3.23.0.0/14`
+        - [ ] `3.120.0.0/14`
+        - [ ] `35.154.0.0/15`
+        - [ ] `44.192.0.0/11`
+        - [ ] `52.64.0.0/13`
+        - [ ] `54.64.0.0/13`
+    - [ ] Ensure bypass policy priority is above team access allow policy.
+
+- [ ] **Jira + Slack Finalization**
+    - [ ] Update Jira Base URL to the public protected hostname.
+    - [ ] Install official Jira Server Slack app in workspace.
+    - [ ] Complete account linking from Slack to Jira using public URL.
+
 - [ ] **Backend Slack Adapter Layer**
     - [ ] Implement `POST /slack/commands` (launch input modal).
     - [ ] Implement `POST /slack/interactions` (modal submit + action buttons).
