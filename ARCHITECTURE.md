@@ -12,6 +12,7 @@ graph TD
     A1[Android App]
     A2[iOS App]
     A3[Desktop App]
+    A4[Slack Client]
   end
 
   subgraph Backend
@@ -21,17 +22,28 @@ graph TD
     B4[Quality Validation Engine]
     B5[Prioritization Engine]
     B6[JIRA Service]
+    B7[Slack Adapter Endpoints]
+  end
+
+  subgraph Connectivity and Security
+    S1[Cloudflare Tunnel]
+    S2[Cloudflare Zero Trust]
   end
 
   subgraph External Services
     C1[OpenAI API]
     C2[SerpAPI]
     C3[JIRA Cloud/Server]
+    C4[Slack Cloud]
   end
 
   A1 --> B1
   A2 --> B1
   A3 --> B1
+  A4 --> C4
+  C4 --> S1
+  S1 --> B7
+  S2 --> C3
 
   B1 --> B2
   B2 --> B3
@@ -41,6 +53,9 @@ graph TD
   B4 --> B2
   B2 --> B5
   B1 --> B6
+  B7 --> B2
+  B7 --> B6
+  B7 --> C4
   B6 --> C3
 ```
 
@@ -147,7 +162,21 @@ Slack is introduced as an additional client channel, equivalent to Android/iOS/m
   - Tracks generated preview state and sync status
   - Prevents duplicate Jira ticket creation on repeated sync actions
 - Secure Connectivity:
-  - Cloudflare Tunnel for HTTPS callback routing to local services
+  - Cloudflare Tunnel for HTTPS callback routing to local services (`localhost` ingress)
+  - Service mode support for roaming environments (Wi-Fi/hotspot switches)
+
+### Secure Connectivity Flow
+
+```mermaid
+flowchart LR
+  S[Slack Cloud] --> T[Cloudflare Tunnel Hostname]
+  T --> A[/slack/commands or /slack/interactions/]
+  A --> B[BacklogAI Local Backend]
+  B --> J[Jira Local Server]
+
+  Z[Zero Trust App] --> J
+  P[Slack Bypass Policy] --> J
+```
 
 ### Sequence Flow
 
@@ -180,7 +209,9 @@ sequenceDiagram
 - Slack signature verification on all Slack callbacks.
 - Request timestamp validation for replay prevention.
 - Tunnel exposure limited to required callback hostnames only.
-- Optional Zero Trust access policies for Jira public hostname, with Slack-specific bypass where needed.
+- Cloudflare Access policy for Jira hostname (team email allow-list).
+- Slack bypass policy for Jira path `/rest/slack/latest/*` with approved Slack IP ranges.
+- Bypass policy priority above the main allow policy.
 
 ### Non-Impact Statement
 No changes are required to existing client APIs for Android, iOS, and macOS desktop.

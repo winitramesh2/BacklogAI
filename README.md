@@ -110,24 +110,31 @@ To run BackLogAI effectively, you need to configure external services in your `.
     - Generation check: `POST /backlog/generate/v2`
 
 ### 5. Slack Integration (Client Channel)
-*   **Integration Model:** Slack is added as an additional client channel (not MCP-based) and reuses the same backend generation + Jira sync pipeline.
-*   **Slack App:** Create an app in your workspace and enable **Slash Commands** + **Interactivity**.
-*   **Required Scopes:**
-    - `chat:write`
-    - `commands`
-    - `channels:history` (optional)
-    - `users:read` (optional)
-*   **Request URLs:**
-    - Slash command URL: `https://<public-backlogai-host>/slack/commands`
-    - Interactivity URL: `https://<public-backlogai-host>/slack/interactions`
-*   **Recommended Connectivity:** Use Cloudflare Tunnel to securely expose local BacklogAI endpoints to Slack over HTTPS without opening inbound firewall ports.
+*   **Integration Model:** Slack is an additional client channel (not MCP) that reuses existing generation and Jira sync services.
+*   **Slack App Setup:** Enable **Slash Commands** + **Interactivity** with scopes `chat:write`, `commands` (optional: `channels:history`, `users:read`).
+*   **Callback URLs:**
+    - Slash command: `https://<public-backlogai-host>/slack/commands`
+    - Interactivity: `https://<public-backlogai-host>/slack/interactions`
+*   **Secure Connectivity (Cloudflare Tunnel):**
+    - `cloudflared tunnel login`
+    - `cloudflared tunnel create <name>`
+    - `cloudflared tunnel route dns <name> <host>`
+    - Configure ingress to `localhost` services and run tunnel as a background service (macOS/Windows).
+*   **Zero Trust + Slack Bypass (for Jira public URL):**
+    - Add Access allow policy for your team email domain.
+    - Add bypass policy for `/rest/slack/latest/*` with Slack IP ranges.
+    - Keep bypass policy above allow policy.
+*   **Finalize Jira + Slack:**
+    - Update Jira Base URL to `https://jira.<yourdomain.com>`
+    - Install Jira Server Slack app
+    - Complete account linking in Slack
 *   **Set Env:**
     ```properties
     SLACK_BOT_TOKEN=xoxb-...
     SLACK_SIGNING_SECRET=...
     SLACK_INTEGRATION_ENABLED=true
     ```
-*   **Slack Flow:** `/backlogai` -> input modal (key/value fields) -> Story Preview in Slack -> **Sync to JIRA** -> Jira key + URL posted back to Slack.
+*   **Runtime Flow:** `/backlogai` -> input modal -> Story Preview -> **Sync to JIRA** -> Jira key + URL posted to Slack.
 
 ---
 
@@ -141,7 +148,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed system design.
 | AI & Research | OpenAI API, SerpAPI (market search) |
 | Backlog Logic | INVEST quality checks, MoSCoW prioritization, story decomposition |
 | Integrations | Jira REST API, Slack Web API + interactive webhooks, SMTP-compatible notification workflow |
-| Client Apps | Kotlin Multiplatform + Compose (Android, iOS, macOS Desktop) |
+| Client Apps | Kotlin Multiplatform + Compose (Android, iOS, macOS Desktop, Windows Upcoming) |
 | Build & Delivery | Gradle, Docker, GitHub, Cloudflare Tunnel (`cloudflared`) |
 
 ## 🗺️ Roadmap
