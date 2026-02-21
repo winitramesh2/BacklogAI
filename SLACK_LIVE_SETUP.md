@@ -24,12 +24,17 @@ Without callback URLs, Slack cannot reach your backend.
 
 ### How
 1. Open 📋 `https://api.slack.com/apps`
-2. Select your Slack app
-3. Go to **Slash Commands**
+2. If you do not have an app yet:
+   - Click **Create New App**
+   - Choose **From scratch**
+   - Enter app name (for example: `BacklogAI Bot`)
+   - Select your workspace and click **Create App**
+3. Select your Slack app
+4. Go to **Slash Commands**
    - Create/edit command: `/backlogai`
    - Request URL:
      - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com/slack/commands`
-4. Go to **Interactivity & Shortcuts**
+5. Go to **Interactivity & Shortcuts**
    - Enable Interactivity
    - Request URL:
      - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com/slack/interactions`
