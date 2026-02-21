@@ -137,3 +137,64 @@ sequenceDiagram
 ### Tooling
 - Gradle for builds
 - Docker Compose for local services
+
+## SLACK Integration
+
+### Architectural Position
+Slack is introduced as an additional client channel, equivalent to Android/iOS/macOS clients, routed through backend adapter endpoints.
+
+### Design Goals
+- Preserve existing mobile/desktop flows without modification.
+- Reuse existing v2 story generation and Jira sync services.
+- Keep local Jira and local backend runtime unchanged.
+- Enable secure remote Slack access through outbound tunnel only.
+
+### Components Added
+- Slack Adapter Endpoints:
+  - `POST /slack/commands`
+  - `POST /slack/interactions`
+  - `POST /slack/events` (optional for later expansion)
+- Slack Service Layer:
+  - Signature validation
+  - Modal parsing/mapping to v2 request model
+  - Preview message and action block rendering
+- Slack Session State Store:
+  - Tracks generated preview state and sync status
+  - Prevents duplicate Jira ticket creation on repeated sync actions
+
+### Sequence Flow
+
+```mermaid
+sequenceDiagram
+  participant User as Slack User
+  participant Slack as Slack Cloud
+  participant API as BacklogAI Backend
+  participant Gen as Story Generation v2
+  participant Jira as Local Jira
+
+  User->>Slack: /backlogai
+  Slack->>API: POST /slack/commands
+  API-->>Slack: Open input modal
+
+  User->>Slack: Submit key/value inputs
+  Slack->>API: POST /slack/interactions (modal_submit)
+  API->>Gen: generate_story_v2(...)
+  Gen-->>API: Story Preview payload
+  API-->>Slack: Post Story Preview + "Sync to JIRA" action
+
+  User->>Slack: Click "Sync to JIRA"
+  Slack->>API: POST /slack/interactions (button_click)
+  API->>Jira: create_issue_v2(...)
+  Jira-->>API: Jira key + URL
+  API-->>Slack: Post Jira key + ticket URL
+```
+
+### Security Model
+- Slack signature verification on all Slack callbacks.
+- Request timestamp validation for replay prevention.
+- Tunnel exposure limited to required callback hostnames only.
+- Optional Zero Trust access policies for Jira public hostname, with Slack-specific bypass where needed.
+
+### Non-Impact Statement
+No changes are required to existing client APIs for Android, iOS, and macOS desktop.
+Slack integration is implemented as an additive client adapter layer.

@@ -110,3 +110,63 @@ This document tracks the development progress of the **BackLogAI** project.
     - [ ] Unit tests (Shared KMP).
 - [x] **Performance**
     - [x] Verify "under 60 seconds" generation requirement.
+
+---
+
+## SLACK Integration
+
+### Objective
+Introduce Slack as an additional client channel to collect backlog inputs, generate Story Preview, and trigger Jira sync, while preserving all existing Android/iOS/macOS behavior.
+
+### Scope
+- Add Slack adapter endpoints and service layer.
+- Add Slack modal input handling (key/value mapping to v2 request).
+- Post Story Preview back to Slack.
+- Add "Sync to JIRA" action handling.
+- Return Jira key + URL to Slack.
+- Add signature verification, idempotency, and session state tracking.
+
+### Out of Scope
+- Replacing existing mobile/desktop clients.
+- Changing existing local service ports/URLs.
+- Migrating core generation/sync logic away from current v2 pipeline.
+
+### Implementation Phases
+
+#### Phase S1: Slack App + Connectivity
+- Configure Slack app (scopes, command, interactivity).
+- Configure secure tunnel to current local backend endpoint.
+- Validate Slack callback reachability and signature verification.
+
+#### Phase S2: Backend Slack Adapter
+- Implement `POST /slack/commands`.
+- Implement `POST /slack/interactions`.
+- Implement modal field parser and mapper to `BacklogItemGenerateV2Request`.
+
+#### Phase S3: Preview + Sync
+- Generate Story Preview via existing v2 generation services.
+- Post preview blocks/messages to Slack.
+- Implement "Sync to JIRA" action to call existing Jira sync path.
+- Post Jira key + URL response to Slack.
+
+#### Phase S4: State + Idempotency
+- Persist Slack session state (input, preview, sync status).
+- Ensure repeated "Sync to JIRA" does not create duplicates.
+- Return existing Jira key/URL on repeated sync action.
+
+#### Phase S5: Validation & Regression
+- Verify Android/iOS/macOS flows unchanged.
+- Verify Slack end-to-end flow from command to Jira sync.
+- Add unit/integration tests for signature validation, mapping, and idempotency.
+
+### Acceptance Criteria
+- Slack user can submit required inputs via modal.
+- Story Preview is posted back to Slack.
+- "Sync to JIRA" creates exactly one Jira ticket.
+- Jira key + URL is posted back to Slack.
+- Existing Android/iOS/macOS flows remain fully functional.
+
+### Operational Notes
+- Keep current local Jira and backend runtime unchanged.
+- Use tunnel and Slack app configuration to enable remote Slack access.
+- Use existing environment values and service endpoints as currently configured.

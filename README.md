@@ -118,3 +118,60 @@ See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for the phased developmen
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## SLACK Integration
+
+### Overview
+BacklogAI can be used from Slack as an additional client channel alongside Android, iOS, and macOS desktop.
+This integration is additive and does not replace or alter existing clients.
+
+### Important
+- This integration is **not MCP-based**.
+- Slack is cloud-hosted; no local Slack server is required.
+- Existing local services on this machine (BacklogAI backend, Jira, Docker services) remain **as-is**.
+- Slack callbacks reach local services through a secure outbound tunnel.
+
+### Prerequisites
+- A Slack App in your workspace.
+- Cloudflare Tunnel (`cloudflared`) configured on this machine.
+- Existing local BacklogAI backend running unchanged.
+- Existing local Jira running unchanged.
+- Public HTTPS tunnel routes mapped to local services without changing local ports.
+
+### Slack App Requirements
+- OAuth scopes:
+  - `chat:write`
+  - `commands`
+  - `channels:history` (optional)
+  - `users:read` (optional)
+- Slash command:
+  - `/backlogai`
+- Interactivity enabled:
+  - Request URL points to BacklogAI Slack interaction endpoint.
+
+### User Flow in Slack
+1. User runs `/backlogai`.
+2. Slack modal collects key/value inputs:
+   - Context (required)
+   - Objective (required)
+   - Target User
+   - Market Segment
+   - Constraints
+   - Success Metrics
+   - Competitors
+3. BacklogAI generates **Story Preview** and posts it back to Slack.
+4. User clicks **Sync to JIRA**.
+5. BacklogAI creates Jira ticket using existing Jira integration logic.
+6. Slack receives Jira ticket key and URL.
+
+### Security
+- Slack request signature validation is enforced.
+- Replay protection is enforced with timestamp checks.
+- Tunnel remains outbound-only; no inbound firewall ports are opened.
+
+### Compatibility Guarantee
+Slack integration is implemented as a separate adapter layer and does not alter:
+- Android flow
+- iOS flow
+- macOS desktop flow
+- Existing `/backlog/generate/v2` and `/backlog/sync/v2` behavior
