@@ -95,8 +95,7 @@ To run BackLogAI effectively, you need to configure external services in your `.
     ```
 
 ### 4. Mobile App Integration (Client - Android/ iOS/ macOS/ Windows)
-*   **Supported Clients (Current):** Android, iOS, macOS Desktop.
-*   **Planned Client:** Windows Desktop.
+*   **Supported Clients:** Android, iOS, macOS Desktop and Windows (Upcoming).
 *   **Backend Requirement:** BacklogAI API must be running and reachable from the client platform.
 *   **Base URL Guidance + Demo Links:**
     - **Android Emulator:** `http://10.0.2.2:<backend-port>`  
@@ -141,9 +140,9 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed system design.
 | Backend API | Python 3.11+, FastAPI, Uvicorn |
 | AI & Research | OpenAI API, SerpAPI (market search) |
 | Backlog Logic | INVEST quality checks, MoSCoW prioritization, story decomposition |
-| Integrations | Jira REST API, SMTP-compatible notification workflow |
+| Integrations | Jira REST API, Slack Web API + interactive webhooks, SMTP-compatible notification workflow |
 | Client Apps | Kotlin Multiplatform + Compose (Android, iOS, macOS Desktop) |
-| Build & Delivery | Gradle, Docker, GitHub |
+| Build & Delivery | Gradle, Docker, GitHub, Cloudflare Tunnel (`cloudflared`) |
 
 ## 🗺️ Roadmap
 
