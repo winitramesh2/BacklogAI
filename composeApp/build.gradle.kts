@@ -1,3 +1,6 @@
+import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.bundling.Zip
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
@@ -105,4 +108,30 @@ compose.desktop {
             packageVersion = "1.0.0"
         }
     }
+}
+
+val isWindowsHost = System.getProperty("os.name").contains("windows", ignoreCase = true)
+
+tasks.register<Zip>("packageWindowsPortableZip") {
+    group = "distribution"
+    description = "Packages portable Windows ZIP from distributable app image"
+    dependsOn("createDistributable")
+    from(layout.buildDirectory.dir("compose/binaries/main/app/BackLogAI"))
+    archiveFileName.set("BackLogAI-windows-portable.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main/windowsPortable"))
+    onlyIf { isWindowsHost }
+}
+
+tasks.register<Copy>("publishWindowsBinariesToDemo") {
+    group = "distribution"
+    description = "Copies MSI and portable ZIP to demo binaries folder"
+    dependsOn("packageMsi", "packageWindowsPortableZip")
+    into(rootProject.layout.projectDirectory.dir("demo/binaries-v3/windows"))
+    from(layout.buildDirectory.dir("compose/binaries/main/msi")) {
+        include("*.msi")
+    }
+    from(layout.buildDirectory.dir("compose/binaries/main/windowsPortable")) {
+        include("BackLogAI-windows-portable.zip")
+    }
+    onlyIf { isWindowsHost }
 }

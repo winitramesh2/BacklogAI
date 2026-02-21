@@ -137,7 +137,10 @@ class InputScreen : Screen {
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxHeight()
+                        .fillMaxWidth()
+                        .widthIn(max = 980.dp)
+                        .align(Alignment.TopCenter)
                         .padding(padding)
                         .padding(16.dp)
                         .verticalScroll(rememberScrollState()),
@@ -280,6 +283,7 @@ class InputScreen : Screen {
                         .align(Alignment.BottomCenter)
                         .padding(16.dp)
                         .fillMaxWidth()
+                        .widthIn(max = 980.dp)
                         .height(56.dp)
                 ) {
                     if (isLoading) {

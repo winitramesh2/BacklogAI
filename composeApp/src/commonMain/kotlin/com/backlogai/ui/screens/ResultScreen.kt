@@ -57,10 +57,19 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                 )
             }
         ) { padding ->
-            LazyColumn(
-                modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.TopCenter
             ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = 980.dp)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 item {
                     HeaderCard(
                         summary = response.summary,
@@ -248,6 +257,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
+                }
                 }
             }
         }
