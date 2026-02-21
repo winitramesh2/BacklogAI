@@ -94,7 +94,23 @@ To run BackLogAI effectively, you need to configure external services in your `.
     JIRA_PROJECT_KEY=KAN
     ```
 
-### 4. Slack Integration (Client Channel)
+### 4. Mobile App Integration (Client - Android/ iOS/ macOS/ Windows)
+*   **Supported Clients (Current):** Android, iOS, macOS Desktop.
+*   **Planned Client:** Windows Desktop.
+*   **Backend Requirement:** BacklogAI API must be running and reachable from the client platform.
+*   **Base URL Guidance + Demo Links:**
+    - **Android Emulator:** `http://10.0.2.2:<backend-port>`  
+      Demo: [`demo/android-e2e-v2/`](./demo/android-e2e-v2/)
+    - **iOS Simulator:** `http://localhost:<backend-port>`  
+      Demo: [`demo/ios-e2e-v2/`](./demo/ios-e2e-v2/)
+    - **macOS Desktop:** `http://localhost:<backend-port>`  
+      Demo: [`demo/macos-e2e-v2/`](./demo/macos-e2e-v2/)
+    - **Windows Desktop (Planned):** `http://<backend-host>:<backend-port>` (same network or public tunnel)
+*   **Quick Verification:**
+    - Health check: `GET /health`
+    - Generation check: `POST /backlog/generate/v2`
+
+### 5. Slack Integration (Client Channel)
 *   **Integration Model:** Slack is added as an additional client channel (not MCP-based) and reuses the same backend generation + Jira sync pipeline.
 *   **Slack App:** Create an app in your workspace and enable **Slash Commands** + **Interactivity**.
 *   **Required Scopes:**
