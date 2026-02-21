@@ -176,6 +176,17 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("🟣", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Click Sync to JIRA after final review, to generate AI story & push to Jira.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     val buttonColor = when (jiraStatus) {
                         is JiraStatus.Success -> Color(0xFF4CAF50)
                         is JiraStatus.Error -> MaterialTheme.colorScheme.error

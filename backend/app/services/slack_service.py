@@ -87,75 +87,67 @@ class SlackService:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*BacklogAI Input Form*\nShare context and objective. We will generate a Jira-ready story preview.",
+                        "text": "*AI-Powered Smart Jira Story Builder*\nFill out the form below and let our AI transform your inputs into a ready-to-work Jira story, complete with market research, competitor data, and success metrics.",
                     },
                 },
-                {
-                    "type": "context",
-                    "elements": [
-                        {
-                            "type": "mrkdwn",
-                            "text": "Required: *Context* and *Objective*. Optional fields improve quality and prioritization.",
-                        }
-                    ],
-                },
-                {"type": "divider"},
                 self._input_block(
                     "context",
                     "Context",
                     True,
                     multiline=True,
-                    placeholder="Describe product background and user problem",
-                    hint="Include current pain point, affected users, and business context.",
+                    placeholder="Describe product background, user pain points, affected audience, and business context.",
                 ),
                 self._input_block(
                     "objective",
                     "Objective",
                     True,
                     multiline=True,
-                    placeholder="State the desired outcome",
-                    hint="Keep this outcome-focused and measurable.",
+                    placeholder="State the desired outcome with measurable impact and expected timeline.",
                 ),
                 self._input_block(
                     "target_user",
                     "Target User",
                     False,
-                    placeholder="Example: Product Manager",
-                    hint="Primary persona who benefits from this change.",
+                    placeholder="Primary persona who benefits. Example: Product Manager, Support Engineer.",
                 ),
                 self._input_block(
                     "market_segment",
                     "Market Segment",
                     False,
-                    placeholder="Example: B2B SaaS",
-                    hint="Industry or segment this story targets.",
+                    placeholder="Industry/segment this story targets. Example: B2B SaaS, FinTech.",
                 ),
                 self._input_block(
                     "constraints",
                     "Constraints",
                     False,
                     multiline=True,
-                    placeholder="List technical or business constraints",
-                    hint="Regulatory, timeline, platform, or architecture constraints.",
+                    placeholder="List technical, compliance, platform, architecture, or timeline constraints.",
                 ),
                 self._input_block(
                     "success_metrics",
                     "Success Metrics",
                     False,
                     multiline=True,
-                    placeholder="Define measurable success outcomes",
-                    hint="Examples: completion rate, SLA, reduction percentage.",
+                    placeholder="Define measurable outcomes. Example: completion rate, SLA, reduction percentage.",
                 ),
                 self._input_block(
                     "competitors",
                     "Competitors (comma-separated)",
                     False,
-                    placeholder="Example: Linear, Productboard",
-                    hint="Optional. Used for comparative market analysis.",
+                    placeholder="Optional for market comparison. Example: Linear, Productboard.",
                 ),
             ],
         }
-        await self._api_post("views.open", {"trigger_id": trigger_id, "view": view})
+        try:
+            await self._api_post("views.open", {"trigger_id": trigger_id, "view": view})
+        except RuntimeError as exc:
+            # Slack modal title has strict length constraints; retry with a compact title if needed.
+            if "invalid_arguments" in str(exc):
+                fallback_view = dict(view)
+                fallback_view["title"] = {"type": "plain_text", "text": "BacklogAI: Smart Story"}
+                await self._api_post("views.open", {"trigger_id": trigger_id, "view": fallback_view})
+            else:
+                raise
 
     @staticmethod
     def _input_block(
@@ -164,7 +156,6 @@ class SlackService:
         required: bool,
         multiline: bool = False,
         placeholder: Optional[str] = None,
-        hint: Optional[str] = None,
     ) -> Dict[str, Any]:
         element = {
             "type": "plain_text_input",
@@ -180,8 +171,6 @@ class SlackService:
             "element": element,
             "optional": not required,
         }
-        if hint:
-            block["hint"] = {"type": "plain_text", "text": hint}
         return block
 
     @staticmethod
@@ -279,7 +268,7 @@ class SlackService:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": "🟣 *Hint:* Click *Sync to JIRA* after final review. Button color is controlled by Slack and cannot be customized to magenta.",
+                        "text": "🟣 *Hint:* Click Sync to JIRA after final review, to generate AI story & push to Jira.",
                     }
                 ],
             },

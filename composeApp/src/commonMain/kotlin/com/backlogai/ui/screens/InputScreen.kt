@@ -150,10 +150,10 @@ class InputScreen : Screen {
 
                     SectionCard(
                         title = "Define the product need",
-                        subtitle = "Give context and objective. The AI fills the rest.",
+                        subtitle = "Share core context and objective first.",
                         onInfoClick = {
                             infoDialogTitle = "Define the product need"
-                            infoDialogBody = "Share the background and the outcome you want.\n\nExample context: We help PMs convert raw customer feedback into prioritized JIRA stories for B2B SaaS teams.\nExample objective: Increase story clarity so PMs spend 40% less time editing before JIRA sync."
+                            infoDialogBody = "Fill out the form and let AI build a ready-to-work Jira story with market and success context.\n\nExample context: We help PMs convert customer feedback into prioritized Jira stories for B2B SaaS teams.\nExample objective: Reduce edits before Jira sync by 40%."
                             showInfoDialog = true
                         }
                     ) {
@@ -163,7 +163,10 @@ class InputScreen : Screen {
                             label = { Text("Context") },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 4,
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            placeholder = {
+                                Text("Describe product background, user pain points, affected audience, and business context.")
+                            }
                         )
 
                         OutlinedTextField(
@@ -172,7 +175,10 @@ class InputScreen : Screen {
                             label = { Text("Objective") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            placeholder = {
+                                Text("State the desired outcome with measurable impact and expected timeline.")
+                            }
                         )
                     }
 
@@ -191,7 +197,10 @@ class InputScreen : Screen {
                             label = { Text("Target User") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            placeholder = {
+                                Text("Primary persona who benefits. Example: Product Manager, Support Engineer.")
+                            }
                         )
 
                         OutlinedTextField(
@@ -200,7 +209,10 @@ class InputScreen : Screen {
                             label = { Text("Market Segment") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            placeholder = {
+                                Text("Industry/segment this story targets. Example: B2B SaaS, FinTech.")
+                            }
                         )
 
                         OutlinedTextField(
@@ -209,7 +221,10 @@ class InputScreen : Screen {
                             label = { Text("Constraints") },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            placeholder = {
+                                Text("List technical, compliance, platform, architecture, or timeline constraints.")
+                            }
                         )
 
                         OutlinedTextField(
@@ -218,7 +233,10 @@ class InputScreen : Screen {
                             label = { Text("Success Metrics") },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            placeholder = {
+                                Text("Define measurable outcomes. Example: completion rate, SLA, reduction percentage.")
+                            }
                         )
 
                         OutlinedTextField(
@@ -227,7 +245,10 @@ class InputScreen : Screen {
                             label = { Text("Competitors (comma-separated)") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            placeholder = {
+                                Text("Optional for market comparison. Example: Linear, Productboard.")
+                            }
                         )
                     }
 
@@ -322,7 +343,13 @@ class InputScreen : Screen {
                     Text("BacklogAI", style = MaterialTheme.typography.displayLarge, color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Turn product context into JIRA-ready stories",
+                        "AI-Powered Smart Jira Story Builder",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.95f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Fill out the form below and get a ready-to-work Jira story with market analysis, competitor data, and success metrics.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
                     )
