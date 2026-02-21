@@ -96,7 +96,7 @@ To run BackLogAI effectively, you need to configure external services in your `.
     ```
 
 ### 4. Mobile App Integration (Client - Android/ iOS/ macOS/ Windows)
-*   **Supported Clients:** Android, iOS, macOS Desktop and Windows (Upcoming).
+*   **Supported Clients/Channels:** Android, iOS, macOS Desktop, Slack and Windows (Upcoming).
 *   **Backend Requirement:** BacklogAI API must be running and reachable from the client platform.
 *   **Base URL Guidance + Demo Links:**
     - **Android Emulator:** 📋 `http://10.0.2.2:<backend-port>`  
@@ -121,6 +121,11 @@ To run BackLogAI effectively, you need to configure external services in your `.
       - [`demo/slack-e2e-v3/slack-backlogai-bot_2.png`](./demo/slack-e2e-v3/slack-backlogai-bot_2.png)
       - [`demo/slack-e2e-v3/slack-backlogai-bot_3.png`](./demo/slack-e2e-v3/slack-backlogai-bot_3.png)
 
+### 4.2 Prebuilt Binaries (v3)
+*   **Android APK:** [`demo/binaries-v3/android/BacklogAI-android-release-unsigned.apk`](./demo/binaries-v3/android/BacklogAI-android-release-unsigned.apk)
+*   **iPhone IPA:** [`demo/binaries-v3/ios/BacklogAI-iPhone.ipa`](./demo/binaries-v3/ios/BacklogAI-iPhone.ipa)
+*   **macOS App Bundle (.zip):** [`demo/binaries-v3/macos/BackLogAI.app.zip`](./demo/binaries-v3/macos/BackLogAI.app.zip)
+
 ### 5. Slack Integration (Client Channel)
 *   **Integration Model:** Slack works as an additional client channel, allowing users to submit inputs, review Story Preview, and trigger Jira sync directly from Slack.
 *   **Business Value:** This reduces context switching and enables backlog collaboration where teams already communicate.
@@ -140,9 +145,21 @@ To run BackLogAI effectively, you need to configure external services in your `.
     SLACK_INTEGRATION_ENABLED=true
     ```
 *   **Runtime Flow:** `/backlogai` -> input modal -> Story Preview -> **Sync to JIRA** -> Jira key + URL posted to Slack.
+*   **Reliability Notes:**
+    - Slash command endpoint returns immediate ACK to avoid Slack timeout/dispatch errors.
+    - Sync is idempotent for repeated button clicks and returns existing Jira key/URL.
 *   **Setup Docs:**
     - Live guide: [`SLACK_LIVE_SETUP.md`](./SLACK_LIVE_SETUP.md)
     - Quick tunnel rotation checklist: [`SLACK_QUICK_TUNNEL_CHECKLIST.md`](./SLACK_QUICK_TUNNEL_CHECKLIST.md)
+
+### 5.1 Supported Channels (Current)
+| Channel | Create Story Preview | Sync to Jira | Status |
+| --- | --- | --- | --- |
+| Android App | ✅ | ✅ | Live |
+| iOS App | ✅ | ✅ | Live |
+| macOS App | ✅ | ✅ | Live |
+| Slack (`/backlogai`) | ✅ | ✅ | Live |
+| Windows App | 🚧 | 🚧 | Planned |
 
 ---
 
