@@ -110,24 +110,15 @@ To run BackLogAI effectively, you need to configure external services in your `.
     - Generation check: `POST /backlog/generate/v2`
 
 ### 5. Slack Integration (Client Channel)
-*   **Integration Model:** Slack is an additional client channel (not MCP) that reuses existing generation and Jira sync services.
-*   **Slack App Setup:** Enable **Slash Commands** + **Interactivity** with scopes `chat:write`, `commands` (optional: `channels:history`, `users:read`).
-*   **Callback URLs:**
-    - Slash command: `https://<public-backlogai-host>/slack/commands`
-    - Interactivity: `https://<public-backlogai-host>/slack/interactions`
-*   **Secure Connectivity (Cloudflare Tunnel):**
-    - `cloudflared tunnel login`
-    - `cloudflared tunnel create <name>`
-    - `cloudflared tunnel route dns <name> <host>`
-    - Configure ingress to `localhost` services and run tunnel as a background service (macOS/Windows).
-*   **Zero Trust + Slack Bypass (for Jira public URL):**
-    - Add Access allow policy for your team email domain.
-    - Add bypass policy for `/rest/slack/latest/*` with Slack IP ranges.
-    - Keep bypass policy above allow policy.
-*   **Finalize Jira + Slack:**
-    - Update Jira Base URL to `https://jira.<yourdomain.com>`
-    - Install Jira Server Slack app
-    - Complete account linking in Slack
+*   **What:** Slack is a new client channel for BacklogAI where users can submit backlog inputs, review Story Preview, and trigger Jira sync directly from Slack.
+*   **Why:** It enables faster collaboration in team channels and allows product workflows to happen where conversations already occur.
+*   **How:**
+    - Create a Slack app with **Slash Commands** + **Interactivity** and required scopes (`chat:write`, `commands`; optional `channels:history`, `users:read`).
+    - Point callback URLs to your backend:
+      - Slash command: `https://<public-backlogai-host>/slack/commands`
+      - Interactivity: `https://<public-backlogai-host>/slack/interactions`
+    - Expose local services securely using a tunnel and protect Jira with Zero Trust policies, including Slack bypass rules for Jira Slack endpoints.
+    - Keep Jira linked via its public base URL so Slack and Jira app interactions work reliably.
 *   **Set Env:**
     ```properties
     SLACK_BOT_TOKEN=xoxb-...
