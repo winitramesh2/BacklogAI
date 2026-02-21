@@ -1,4 +1,7 @@
-from fastapi import FastAPI, HTTPException
+import asyncio
+import json
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from tortoise.contrib.fastapi import register_tortoise
 import os
@@ -22,7 +25,8 @@ from app.services.story_engine import StoryGenerationEngine
 from app.services.prioritization_engine import PrioritizationEngine
 from app.services.quality_engine import QualityValidationEngine
 from app.services.jira_service import JiraService
-from app.models import BacklogItem, BacklogItemStatus, Project
+from app.services.slack_service import SlackService
+from app.models import BacklogItem, BacklogItemStatus, Project, SlackSessionStatus
 
 # Load environment variables
 load_dotenv()
@@ -59,6 +63,7 @@ story_engine = StoryGenerationEngine()
 prioritization_engine = PrioritizationEngine()
 quality_engine = QualityValidationEngine()
 jira_service = JiraService()
+slack_service = SlackService()
 
 @app.get("/")
 async def root():
@@ -70,6 +75,96 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "db_url": DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else "sqlite"}
+
+
+def _verify_slack_request(headers: dict, body: bytes) -> None:
+    signature = headers.get("x-slack-signature", "")
+    timestamp = headers.get("x-slack-request-timestamp", "")
+    if not slack_service.verify_signature(timestamp=timestamp, signature=signature, body=body):
+        raise HTTPException(status_code=401, detail="Invalid Slack signature")
+
+
+async def _generate_and_post_preview(input_payload: dict, channel_id: str, slack_user_id: str) -> None:
+    try:
+        generated_content = await story_engine.generate_story_v2(
+            context=input_payload["context"],
+            objective=input_payload["objective"],
+            target_user=input_payload.get("target_user"),
+            market_segment=input_payload.get("market_segment"),
+            constraints=input_payload.get("constraints"),
+            success_metrics=input_payload.get("success_metrics"),
+            competitors=input_payload.get("competitors_optional", []),
+        )
+
+        summary = generated_content.get("summary", input_payload["objective"])
+        user_story = generated_content.get("user_story", input_payload["objective"])
+        acceptance_criteria = generated_content.get("acceptance_criteria", [])
+        dependencies = generated_content.get("dependencies", [])
+        metrics = generated_content.get("metrics", [])
+        non_functional_reqs = generated_content.get("non_functional_reqs", [])
+        pillar_scores = _normalize_pillar_scores(generated_content.get("pillar_scores"))
+        _, priority_level = prioritization_engine.calculate_priority(pillar_scores.dict())
+        priority_value = priority_level.value if hasattr(priority_level, "value") else str(priority_level)
+        warnings, quality_score = quality_engine.validate_invest_v2(
+            summary=summary,
+            user_story=user_story,
+            acceptance_criteria=acceptance_criteria,
+            dependencies=dependencies,
+            metrics=metrics,
+            non_functional_reqs=non_functional_reqs,
+        )
+
+        research_summary_payload = generated_content.get("research_summary") or {}
+        research_summary = ResearchSummary(
+            trends=research_summary_payload.get("trends", []),
+            competitor_features=research_summary_payload.get("competitor_features", []),
+            differentiators=research_summary_payload.get("differentiators", []),
+            risks=research_summary_payload.get("risks", []),
+            sources=research_summary_payload.get("sources", []),
+        )
+
+        description = jira_service.build_description_template(
+            context=input_payload["context"],
+            objective=input_payload["objective"],
+            user_story=user_story,
+            acceptance_criteria=acceptance_criteria,
+            non_functional_reqs=non_functional_reqs,
+            risks=generated_content.get("risks", []),
+            metrics=metrics,
+            rollout_plan=generated_content.get("rollout_plan", []),
+            research_summary=research_summary,
+        )
+
+        preview_payload = {
+            "summary": summary,
+            "user_story": user_story,
+            "description": description,
+            "acceptance_criteria": acceptance_criteria,
+            "priority": priority_value,
+            "quality_score": quality_score,
+            "labels": [],
+            "components": [],
+            "warnings": warnings,
+        }
+
+        session = await slack_service.create_session(
+            slack_user_id=slack_user_id,
+            slack_channel_id=channel_id,
+            input_payload=input_payload,
+            preview_payload=preview_payload,
+        )
+
+        await slack_service.post_preview(
+            channel_id=channel_id,
+            summary=summary,
+            user_story=user_story,
+            acceptance_criteria=acceptance_criteria,
+            quality_score=quality_score,
+            moscow_priority=priority_value,
+            session_id=str(session.id),
+        )
+    except Exception as exc:
+        await slack_service.post_error(channel_id=channel_id, message=str(exc))
 
 @app.post("/backlog/generate", response_model=BacklogItemResponse)
 async def generate_backlog_item(item: BacklogItemCreate):
@@ -274,3 +369,112 @@ async def sync_to_jira_v2(request: JiraSyncRequestV2):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/slack/commands")
+async def slack_commands(request: Request):
+    if not slack_service.is_configured:
+        raise HTTPException(status_code=503, detail="Slack integration is disabled")
+
+    raw_body = await request.body()
+    _verify_slack_request(request.headers, raw_body)
+    form = await request.form()
+
+    command = str(form.get("command", "")).strip()
+    trigger_id = str(form.get("trigger_id", "")).strip()
+    channel_id = str(form.get("channel_id", "")).strip()
+    user_id = str(form.get("user_id", "")).strip()
+
+    if command != "/backlogai":
+        return JSONResponse({"response_type": "ephemeral", "text": "Unsupported command."})
+
+    await slack_service.open_input_modal(trigger_id=trigger_id, channel_id=channel_id, user_id=user_id)
+    return JSONResponse({"response_type": "ephemeral", "text": "Opening BacklogAI modal..."})
+
+
+@app.post("/slack/interactions")
+async def slack_interactions(request: Request):
+    if not slack_service.is_configured:
+        raise HTTPException(status_code=503, detail="Slack integration is disabled")
+
+    raw_body = await request.body()
+    _verify_slack_request(request.headers, raw_body)
+    form = await request.form()
+    payload_raw = form.get("payload")
+    if not payload_raw:
+        raise HTTPException(status_code=400, detail="Missing payload")
+    payload = json.loads(str(payload_raw))
+    interaction_type = payload.get("type")
+
+    if interaction_type == "view_submission" and payload.get("view", {}).get("callback_id") == "backlogai_modal_submit":
+        metadata = json.loads(payload.get("view", {}).get("private_metadata", "{}") or "{}")
+        channel_id = metadata.get("channel_id")
+        user_id = metadata.get("user_id")
+        input_payload = slack_service.parse_modal_submission(payload)
+
+        if not input_payload.get("context") or not input_payload.get("objective"):
+            return JSONResponse({
+                "response_action": "errors",
+                "errors": {
+                    "context": "Context is required",
+                    "objective": "Objective is required"
+                }
+            })
+
+        asyncio.create_task(_generate_and_post_preview(input_payload, channel_id, user_id))
+        return JSONResponse({"response_action": "clear"})
+
+    if interaction_type == "block_actions":
+        actions = payload.get("actions", [])
+        if not actions:
+            return JSONResponse({"text": "No action payload."})
+
+        action = actions[0]
+        if action.get("action_id") != "sync_to_jira":
+            return JSONResponse({"text": "Unsupported action."})
+
+        session_id = action.get("value")
+        session = await slack_service.get_session(session_id)
+        if not session:
+            return JSONResponse({"text": "Session not found or expired."})
+
+        if session.status == SlackSessionStatus.SYNCED:
+            await slack_service.post_sync_success(
+                channel_id=session.slack_channel_id,
+                jira_key=session.jira_key or "unknown",
+                jira_url=session.jira_url or "",
+            )
+            return JSONResponse({"text": "Already synced."})
+
+        preview = session.preview_payload or {}
+        jira_response = jira_service.create_issue_v2(
+            summary=preview.get("summary", "BacklogAI Story"),
+            description=preview.get("description", ""),
+            priority=preview.get("priority", "Medium"),
+            issue_type="Story",
+            labels=preview.get("labels", []),
+            components=preview.get("components", []),
+        )
+        await slack_service.mark_synced(session, jira_response["key"], jira_response["url"])
+        await slack_service.post_sync_success(
+            channel_id=session.slack_channel_id,
+            jira_key=jira_response["key"],
+            jira_url=jira_response["url"],
+        )
+        return JSONResponse({"text": "Synced to JIRA."})
+
+    return JSONResponse({"text": "Interaction received."})
+
+
+@app.post("/slack/events")
+async def slack_events(request: Request):
+    if not slack_service.is_configured:
+        raise HTTPException(status_code=503, detail="Slack integration is disabled")
+
+    raw_body = await request.body()
+    _verify_slack_request(request.headers, raw_body)
+    payload = await request.json()
+
+    if payload.get("type") == "url_verification":
+        return JSONResponse({"challenge": payload.get("challenge")})
+    return JSONResponse({"ok": True})

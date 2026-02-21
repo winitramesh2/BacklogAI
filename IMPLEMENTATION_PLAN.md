@@ -155,27 +155,27 @@ This document tracks the development progress of the **BackLogAI** project.
     - [ ] Complete account linking from Slack to Jira using public URL.
 
 - [ ] **Backend Slack Adapter Layer**
-    - [ ] Implement `POST /slack/commands` (launch input modal).
-    - [ ] Implement `POST /slack/interactions` (modal submit + action buttons).
-    - [ ] Add modal key/value parser mapped to `BacklogItemGenerateV2Request`.
-    - [ ] Build Slack Block Kit responses for Story Preview and actions.
+    - [x] Implement `POST /slack/commands` (launch input modal).
+    - [x] Implement `POST /slack/interactions` (modal submit + action buttons).
+    - [x] Add modal key/value parser mapped to `BacklogItemGenerateV2Request`.
+    - [x] Build Slack Block Kit responses for Story Preview and actions.
 
 - [ ] **Story Preview & Jira Sync Flow**
-    - [ ] Generate Story Preview using existing v2 generation pipeline.
-    - [ ] Post preview message back to Slack channel.
-    - [ ] Implement "Sync to JIRA" action path reusing existing Jira sync service.
-    - [ ] Post Jira ticket key and URL back to Slack after successful sync.
+    - [x] Generate Story Preview using existing v2 generation pipeline.
+    - [x] Post preview message back to Slack channel.
+    - [x] Implement "Sync to JIRA" action path reusing existing Jira sync service.
+    - [x] Post Jira ticket key and URL back to Slack after successful sync.
 
 - [ ] **State, Idempotency & Reliability**
-    - [ ] Persist Slack session state (input payload, preview payload, sync status).
-    - [ ] Prevent duplicate Jira tickets on repeated sync actions.
-    - [ ] Return existing Jira key/URL for repeated sync clicks.
+    - [x] Persist Slack session state (input payload, preview payload, sync status).
+    - [x] Prevent duplicate Jira tickets on repeated sync actions.
+    - [x] Return existing Jira key/URL for repeated sync clicks.
 
 - [ ] **Validation & Regression**
     - [ ] Validate end-to-end Slack flow: input -> preview -> sync -> Jira response.
-    - [ ] Add tests for signature validation, payload mapping, and idempotency.
+    - [x] Add tests for signature validation, payload mapping, and idempotency.
     - [ ] Re-verify Android/iOS/macOS flows remain unchanged.
 
 - [ ] **Scope Note**
-    - [ ] Existing clients remain active: Android, iOS, macOS Desktop.
-    - [ ] Windows client support remains upcoming and unaffected by Slack rollout.
+    - [x] Existing clients remain active: Android, iOS, macOS Desktop.
+    - [x] Windows client support remains upcoming and unaffected by Slack rollout.

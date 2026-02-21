@@ -1,5 +1,6 @@
 from tortoise import fields, models
 from enum import Enum
+from uuid import uuid4
 
 class User(models.Model):
     id = fields.UUIDField(pk=True)
@@ -76,3 +77,26 @@ class BacklogItem(models.Model):
 
     class Meta:
         table = "backlog_items"
+
+
+class SlackSessionStatus(str, Enum):
+    GENERATED = "generated"
+    SYNCED = "synced"
+    EXPIRED = "expired"
+
+
+class SlackSession(models.Model):
+    id = fields.UUIDField(pk=True, default=uuid4)
+    slack_user_id = fields.CharField(max_length=64)
+    slack_channel_id = fields.CharField(max_length=64)
+    slack_message_ts = fields.CharField(max_length=64, null=True)
+    input_payload = fields.JSONField(default=dict)
+    preview_payload = fields.JSONField(default=dict)
+    status = fields.CharEnumField(SlackSessionStatus, default=SlackSessionStatus.GENERATED)
+    jira_key = fields.CharField(max_length=50, null=True)
+    jira_url = fields.CharField(max_length=512, null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "slack_sessions"
