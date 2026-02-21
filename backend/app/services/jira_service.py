@@ -1,12 +1,14 @@
 import os
+import socket
 from atlassian import Jira
 from typing import Dict, Optional, Tuple, List
+from urllib.parse import urlsplit, urlunsplit
 
 from app.schemas import ResearchSummary
 
 class JiraService:
     def __init__(self):
-        self.url = os.getenv("JIRA_URL")
+        self.url = self._normalize_jira_url(os.getenv("JIRA_URL"))
         self.username = os.getenv("JIRA_USERNAME")
         self.password = os.getenv("JIRA_PASSWORD") or os.getenv("JIRA_API_TOKEN")
         self.project_key = os.getenv("JIRA_PROJECT_KEY", "KAN") # Default project key
@@ -29,6 +31,37 @@ class JiraService:
                 print(f"Failed to initialize JIRA client: {e}")
         else:
             print("JIRA credentials missing. Using Mock Mode.")
+
+    @staticmethod
+    def _normalize_jira_url(raw_url: Optional[str]) -> Optional[str]:
+        if not raw_url:
+            return raw_url
+
+        parsed = urlsplit(raw_url)
+        hostname = parsed.hostname
+        if hostname not in {"host.docker.internal", "gateway.docker.internal"}:
+            return raw_url
+
+        try:
+            socket.gethostbyname(hostname)
+            return raw_url
+        except OSError:
+            auth = ""
+            if parsed.username:
+                auth = parsed.username
+                if parsed.password:
+                    auth += f":{parsed.password}"
+                auth += "@"
+
+            port = f":{parsed.port}" if parsed.port else ""
+            normalized = urlunsplit(
+                (parsed.scheme, f"{auth}localhost{port}", parsed.path, parsed.query, parsed.fragment)
+            )
+            print(
+                "JIRA_URL host alias was not resolvable; "
+                f"falling back from {hostname} to localhost ({normalized})."
+            )
+            return normalized
     
     def create_issue(self, title: str, description: str, priority: str, issue_type: str = "Story") -> Dict[str, str]:
         """

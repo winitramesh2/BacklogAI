@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,6 +37,8 @@ app = FastAPI(
     description="Intelligent Backlog Generator & Prioritization System",
     version="0.1.0"
 )
+
+logger = logging.getLogger(__name__)
 
 # CORS middleware
 app.add_middleware(
@@ -165,6 +168,18 @@ async def _generate_and_post_preview(input_payload: dict, channel_id: str, slack
         )
     except Exception as exc:
         await slack_service.post_error(channel_id=channel_id, message=str(exc))
+
+
+async def _open_modal_safely(trigger_id: str, channel_id: str, user_id: str) -> None:
+    try:
+        await slack_service.open_input_modal(trigger_id=trigger_id, channel_id=channel_id, user_id=user_id)
+    except Exception as exc:
+        logger.exception(
+            "Slack modal open failed for channel=%s user=%s: %s",
+            channel_id,
+            user_id,
+            exc,
+        )
 
 @app.post("/backlog/generate", response_model=BacklogItemResponse)
 async def generate_backlog_item(item: BacklogItemCreate):
@@ -388,7 +403,15 @@ async def slack_commands(request: Request):
     if command != "/backlogai":
         return JSONResponse({"response_type": "ephemeral", "text": "Unsupported command."})
 
-    await slack_service.open_input_modal(trigger_id=trigger_id, channel_id=channel_id, user_id=user_id)
+    if not trigger_id or not channel_id or not user_id:
+        return JSONResponse(
+            {
+                "response_type": "ephemeral",
+                "text": "Missing Slack command metadata. Please retry /backlogai.",
+            }
+        )
+
+    asyncio.create_task(_open_modal_safely(trigger_id=trigger_id, channel_id=channel_id, user_id=user_id))
     return JSONResponse({"response_type": "ephemeral", "text": "Opening BacklogAI modal..."})
 
 

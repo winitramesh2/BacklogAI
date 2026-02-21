@@ -6,7 +6,9 @@ This guide helps you run a real end-to-end Slack flow with your current local se
 - BacklogAI backend runs locally on port `8001`
 - Jira runs locally on port `8081`
 - Cloudflare quick tunnel URL for BacklogAI:
-  - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com`
+  - 📋 `https://taxi-copying-powered-recorded.trycloudflare.com`
+- Cloudflare quick tunnel URL for Jira:
+  - 📋 `https://electricity-relationships-activists-clubs.trycloudflare.com`
 
 > Tip: GitHub shows a copy button on fenced code blocks. Use it for commands below.
 
@@ -37,14 +39,14 @@ Without callback URLs, Slack cannot reach your backend.
    - Click **Create New Command** (or edit existing)
    - Command: `/backlogai`
    - Short description: `Generate backlog story preview`
-   - Usage hint: `opens input modal`
-   - Request URL:
-     - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com/slack/commands`
+    - Usage hint: `opens input modal`
+    - Request URL:
+      - 📋 `https://taxi-copying-powered-recorded.trycloudflare.com/slack/commands`
    - Click **Save**
 6. In the left sidebar, open **Interactivity & Shortcuts**
    - Enable Interactivity
    - Request URL:
-     - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com/slack/interactions`
+      - 📋 `https://taxi-copying-powered-recorded.trycloudflare.com/slack/interactions`
    - Click **Save Changes**
 
 ---
@@ -117,7 +119,8 @@ Quick checks:
 
 ```bash
 curl http://127.0.0.1:8001/health
-curl https://acts-destination-dayton-insertion.trycloudflare.com/health
+curl https://taxi-copying-powered-recorded.trycloudflare.com/health
+curl https://electricity-relationships-activists-clubs.trycloudflare.com
 ```
 
 Both should respond successfully.
