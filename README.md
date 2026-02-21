@@ -98,13 +98,13 @@ To run BackLogAI effectively, you need to configure external services in your `.
 *   **Supported Clients:** Android, iOS, macOS Desktop and Windows (Upcoming).
 *   **Backend Requirement:** BacklogAI API must be running and reachable from the client platform.
 *   **Base URL Guidance + Demo Links:**
-    - **Android Emulator:** `http://10.0.2.2:<backend-port>`  
+    - **Android Emulator:** 📋 `http://10.0.2.2:<backend-port>`  
       Demo: [`demo/android-e2e-v2/`](./demo/android-e2e-v2/)
-    - **iOS Simulator:** `http://localhost:<backend-port>`  
+    - **iOS Simulator:** 📋 `http://localhost:<backend-port>`  
       Demo: [`demo/ios-e2e-v2/`](./demo/ios-e2e-v2/)
-    - **macOS Desktop:** `http://localhost:<backend-port>`  
+    - **macOS Desktop:** 📋 `http://localhost:<backend-port>`  
       Demo: [`demo/macos-e2e-v2/`](./demo/macos-e2e-v2/)
-    - **Windows Desktop (Planned):** `http://<backend-host>:<backend-port>` (same network or public tunnel)
+    - **Windows Desktop (Planned):** 📋 `http://<backend-host>:<backend-port>` (same network or public tunnel)
 *   **Quick Verification:**
     - Health check: `GET /health`
     - Generation check: `POST /backlog/generate/v2`
@@ -115,11 +115,11 @@ To run BackLogAI effectively, you need to configure external services in your `.
 *   **Setup Summary:**
     - Create a Slack app with **Slash Commands** + **Interactivity** and scopes `chat:write`, `commands` (optional: `channels:history`, `users:read`).
     - Configure callback endpoints:
-      - Slash command: `https://<public-backlogai-host>/slack/commands`
-      - Interactivity: `https://<public-backlogai-host>/slack/interactions`
+      - Slash command: 📋 `https://<public-backlogai-host>/slack/commands`
+      - Interactivity: 📋 `https://<public-backlogai-host>/slack/interactions`
     - Keep connectivity secure with tunnel + Zero Trust policies and Slack bypass rules for Jira Slack endpoints.
     - Keep Jira linked using the public Jira base URL.
-*   **Set Env:**
+*   **Set Env:** (📋 copy into `.env`)
     ```properties
     SLACK_BOT_TOKEN=xoxb-...
     SLACK_SIGNING_SECRET=...

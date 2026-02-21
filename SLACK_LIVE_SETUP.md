@@ -6,7 +6,9 @@ This guide helps you run a real end-to-end Slack flow with your current local se
 - BacklogAI backend runs locally on port `8001`
 - Jira runs locally on port `8081`
 - Cloudflare quick tunnel URL for BacklogAI:
-  - `https://acts-destination-dayton-insertion.trycloudflare.com`
+  - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com`
+
+> Tip: GitHub shows a copy button on fenced code blocks. Use it for commands below.
 
 > Note: Quick tunnel URLs are temporary. If the tunnel restarts, update Slack callback URLs with the new URL.
 
@@ -21,16 +23,16 @@ Set where Slack sends command and interaction requests.
 Without callback URLs, Slack cannot reach your backend.
 
 ### How
-1. Open `https://api.slack.com/apps`
+1. Open 📋 `https://api.slack.com/apps`
 2. Select your Slack app
 3. Go to **Slash Commands**
    - Create/edit command: `/backlogai`
    - Request URL:
-     - `https://acts-destination-dayton-insertion.trycloudflare.com/slack/commands`
+     - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com/slack/commands`
 4. Go to **Interactivity & Shortcuts**
    - Enable Interactivity
    - Request URL:
-     - `https://acts-destination-dayton-insertion.trycloudflare.com/slack/interactions`
+     - 📋 `https://acts-destination-dayton-insertion.trycloudflare.com/slack/interactions`
 
 ---
 
@@ -62,7 +64,7 @@ Provide Slack credentials to backend.
 Backend needs these to verify Slack requests and post replies.
 
 ### How
-Add/update in project `.env`:
+📋 Copy into project `.env`:
 
 ```properties
 SLACK_BOT_TOKEN=xoxb-...
@@ -86,6 +88,8 @@ Existing process does not auto-load changed `.env` values.
 ### How
 From repo root:
 
+📋 Copy and run:
+
 ```bash
 pkill -f "uvicorn app.main:app" || true
 
@@ -95,6 +99,8 @@ nohup env PYTHONPATH="/Users/rameshk/Desktop/projects/BacklogAI/backend" JIRA_UR
 ```
 
 Quick checks:
+
+📋 Copy and run:
 
 ```bash
 curl http://127.0.0.1:8001/health
@@ -114,7 +120,7 @@ Run the real user flow.
 Confirms Slack -> BacklogAI -> Jira integration works end-to-end.
 
 ### How
-1. In Slack channel, run `/backlogai`
+1. In Slack channel, run 📋 `/backlogai`
 2. Fill modal inputs and submit
 3. Confirm Story Preview appears
 4. Click **Sync to JIRA**

@@ -12,7 +12,7 @@ Quick tunnel URLs can change when:
 > Quick note: `trycloudflare.com` quick tunnels are ephemeral by design. For stable URLs across restarts, use a named tunnel with your own domain.
 
 ## Get the new URL fast
-Run:
+📋 Copy and run:
 
 ```bash
 python3 - <<'PY'
@@ -31,15 +31,17 @@ PY
 ```
 
 ## Update Slack in under 30 seconds
-1. Open `https://api.slack.com/apps` and select your app.
+1. Open 📋 `https://api.slack.com/apps` and select your app.
 2. **Slash Commands** -> `/backlogai` -> set Request URL:
-   - `https://<new-url>.trycloudflare.com/slack/commands`
+   - 📋 `https://<new-url>.trycloudflare.com/slack/commands`
 3. **Interactivity & Shortcuts** -> set Request URL:
-   - `https://<new-url>.trycloudflare.com/slack/interactions`
+   - 📋 `https://<new-url>.trycloudflare.com/slack/interactions`
 4. Save both pages.
 5. Test in Slack with `/backlogai`.
 
 ## Quick health check
+
+📋 Copy and run:
 
 ```bash
 curl https://<new-url>.trycloudflare.com/health
