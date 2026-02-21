@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from app.main import app
 import app.main as main_module
+import json
 
 client = TestClient(app)
 
@@ -42,6 +43,15 @@ class _DummySlackService:
 
     async def open_input_modal(self, trigger_id, channel_id, user_id):
         self.modal_opened = True
+
+
+class _DummySession:
+    def __init__(self, status, preview_payload=None):
+        self.status = status
+        self.slack_channel_id = "C123"
+        self.jira_key = "TAC-1"
+        self.jira_url = "http://localhost:8081/browse/TAC-1"
+        self.preview_payload = preview_payload or {}
 
 
 def test_slack_commands_opens_modal(monkeypatch):
@@ -99,3 +109,82 @@ def test_slack_interactions_missing_payload(monkeypatch):
     )
 
     assert response.status_code == 400
+
+
+def test_slack_interactions_sync_already_synced(monkeypatch):
+    class _SlackServiceForSync(_DummySlackService):
+        async def get_session(self, session_id):
+            return _DummySession(status=main_module.SlackSessionStatus.SYNCED)
+
+        async def post_sync_success(self, channel_id, jira_key, jira_url):
+            return {"ok": True}
+
+    dummy = _SlackServiceForSync()
+    monkeypatch.setattr(main_module, "slack_service", dummy)
+
+    payload = {
+        "type": "block_actions",
+        "actions": [{"action_id": "sync_to_jira", "value": "session-1"}],
+    }
+    response = client.post(
+        "/slack/interactions",
+        data={"payload": json.dumps(payload)},
+        headers={
+            "x-slack-signature": "v0=dummy",
+            "x-slack-request-timestamp": "123",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["text"] == "Already synced."
+
+
+def test_slack_interactions_sync_new_session(monkeypatch):
+    class _SlackServiceForSync(_DummySlackService):
+        def __init__(self):
+            super().__init__()
+            self.synced = False
+
+        async def get_session(self, session_id):
+            preview = {
+                "summary": "Story from Slack",
+                "description": "Generated story description",
+                "priority": "Should Have",
+                "labels": [],
+                "components": [],
+            }
+            return _DummySession(status=main_module.SlackSessionStatus.GENERATED, preview_payload=preview)
+
+        async def mark_synced(self, session, jira_key, jira_url):
+            self.synced = True
+            session.status = main_module.SlackSessionStatus.SYNCED
+            session.jira_key = jira_key
+            session.jira_url = jira_url
+
+        async def post_sync_success(self, channel_id, jira_key, jira_url):
+            return {"ok": True}
+
+    class _DummyJiraService:
+        def create_issue_v2(self, summary, description, priority, issue_type, labels, components):
+            return {"key": "TAC-999", "url": "http://localhost:8081/browse/TAC-999"}
+
+    dummy = _SlackServiceForSync()
+    monkeypatch.setattr(main_module, "slack_service", dummy)
+    monkeypatch.setattr(main_module, "jira_service", _DummyJiraService())
+
+    payload = {
+        "type": "block_actions",
+        "actions": [{"action_id": "sync_to_jira", "value": "session-2"}],
+    }
+    response = client.post(
+        "/slack/interactions",
+        data={"payload": json.dumps(payload)},
+        headers={
+            "x-slack-signature": "v0=dummy",
+            "x-slack-request-timestamp": "123",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["text"] == "Synced to JIRA."
+    assert dummy.synced is True
