@@ -83,12 +83,30 @@ class SlackService:
             "close": {"type": "plain_text", "text": "Cancel"},
             "private_metadata": json.dumps({"channel_id": channel_id, "user_id": user_id}),
             "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*BacklogAI Input Form*\nShare context and objective. We will generate a Jira-ready story preview.",
+                    },
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": "Required: *Context* and *Objective*. Optional fields improve quality and prioritization.",
+                        }
+                    ],
+                },
+                {"type": "divider"},
                 self._input_block(
                     "context",
                     "Context",
                     True,
                     multiline=True,
                     placeholder="Describe product background and user problem",
+                    hint="Include current pain point, affected users, and business context.",
                 ),
                 self._input_block(
                     "objective",
@@ -96,18 +114,21 @@ class SlackService:
                     True,
                     multiline=True,
                     placeholder="State the desired outcome",
+                    hint="Keep this outcome-focused and measurable.",
                 ),
                 self._input_block(
                     "target_user",
                     "Target User",
                     False,
                     placeholder="Example: Product Manager",
+                    hint="Primary persona who benefits from this change.",
                 ),
                 self._input_block(
                     "market_segment",
                     "Market Segment",
                     False,
                     placeholder="Example: B2B SaaS",
+                    hint="Industry or segment this story targets.",
                 ),
                 self._input_block(
                     "constraints",
@@ -115,6 +136,7 @@ class SlackService:
                     False,
                     multiline=True,
                     placeholder="List technical or business constraints",
+                    hint="Regulatory, timeline, platform, or architecture constraints.",
                 ),
                 self._input_block(
                     "success_metrics",
@@ -122,12 +144,14 @@ class SlackService:
                     False,
                     multiline=True,
                     placeholder="Define measurable success outcomes",
+                    hint="Examples: completion rate, SLA, reduction percentage.",
                 ),
                 self._input_block(
                     "competitors",
                     "Competitors (comma-separated)",
                     False,
                     placeholder="Example: Linear, Productboard",
+                    hint="Optional. Used for comparative market analysis.",
                 ),
             ],
         }
@@ -140,6 +164,7 @@ class SlackService:
         required: bool,
         multiline: bool = False,
         placeholder: Optional[str] = None,
+        hint: Optional[str] = None,
     ) -> Dict[str, Any]:
         element = {
             "type": "plain_text_input",
@@ -148,13 +173,16 @@ class SlackService:
         }
         if placeholder:
             element["placeholder"] = {"type": "plain_text", "text": placeholder}
-        return {
+        block: Dict[str, Any] = {
             "type": "input",
             "block_id": action_id,
             "label": {"type": "plain_text", "text": label},
             "element": element,
             "optional": not required,
         }
+        if hint:
+            block["hint"] = {"type": "plain_text", "text": hint}
+        return block
 
     @staticmethod
     def parse_modal_submission(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -218,23 +246,42 @@ class SlackService:
         blocks = [
             {
                 "type": "header",
-                "text": {"type": "plain_text", "text": "BacklogAI Story Preview"},
+                "text": {"type": "plain_text", "text": "BacklogAI Story Preview ✨"},
             },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "Review this draft before syncing. Generated from your Slack inputs.",
+                    }
+                ],
+            },
+            {"type": "divider"},
             {
                 "type": "section",
                 "fields": [
-                    {"type": "mrkdwn", "text": f"*Summary*\n{summary}"},
-                    {"type": "mrkdwn", "text": f"*Priority*\n{moscow_priority}"},
-                    {"type": "mrkdwn", "text": f"*Quality Score*\n{int(quality_score)}"},
+                    {"type": "mrkdwn", "text": f"*📝 Summary*\n{summary}"},
+                    {"type": "mrkdwn", "text": f"*📌 Priority*\n{moscow_priority}"},
+                    {"type": "mrkdwn", "text": f"*✅ Quality Score*\n{int(quality_score)}"},
                 ],
             },
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"*User Story*\n{user_story}"},
+                "text": {"type": "mrkdwn", "text": f"*👤 User Story*\n{user_story}"},
             },
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"*Acceptance Criteria*\n{ac_text}"},
+                "text": {"type": "mrkdwn", "text": f"*🧪 Acceptance Criteria*\n{ac_text}"},
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "🟣 *Hint:* Click *Sync to JIRA* after final review. Button color is controlled by Slack and cannot be customized to magenta.",
+                    }
+                ],
             },
             {
                 "type": "actions",
