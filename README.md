@@ -110,15 +110,15 @@ To run BackLogAI effectively, you need to configure external services in your `.
     - Generation check: `POST /backlog/generate/v2`
 
 ### 5. Slack Integration (Client Channel)
-*   **What:** Slack is a new client channel for BacklogAI where users can submit backlog inputs, review Story Preview, and trigger Jira sync directly from Slack.
-*   **Why:** It enables faster collaboration in team channels and allows product workflows to happen where conversations already occur.
-*   **How:**
-    - Create a Slack app with **Slash Commands** + **Interactivity** and required scopes (`chat:write`, `commands`; optional `channels:history`, `users:read`).
-    - Point callback URLs to your backend:
+*   **Integration Model:** Slack works as an additional client channel, allowing users to submit inputs, review Story Preview, and trigger Jira sync directly from Slack.
+*   **Business Value:** This reduces context switching and enables backlog collaboration where teams already communicate.
+*   **Setup Summary:**
+    - Create a Slack app with **Slash Commands** + **Interactivity** and scopes `chat:write`, `commands` (optional: `channels:history`, `users:read`).
+    - Configure callback endpoints:
       - Slash command: `https://<public-backlogai-host>/slack/commands`
       - Interactivity: `https://<public-backlogai-host>/slack/interactions`
-    - Expose local services securely using a tunnel and protect Jira with Zero Trust policies, including Slack bypass rules for Jira Slack endpoints.
-    - Keep Jira linked via its public base URL so Slack and Jira app interactions work reliably.
+    - Keep connectivity secure with tunnel + Zero Trust policies and Slack bypass rules for Jira Slack endpoints.
+    - Keep Jira linked using the public Jira base URL.
 *   **Set Env:**
     ```properties
     SLACK_BOT_TOKEN=xoxb-...
