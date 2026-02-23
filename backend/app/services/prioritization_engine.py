@@ -1,5 +1,5 @@
 from typing import Dict, Tuple
-from app.schemas import PriorityLevel
+from app.schemas import PriorityBand, PriorityBreakdown, PriorityLevel
 
 class PrioritizationEngine:
     
@@ -45,3 +45,51 @@ class PrioritizationEngine:
             priority = PriorityLevel.WONT_HAVE
             
         return round(final_score, 1), priority
+
+    @staticmethod
+    def calculate_priority_v2(
+        pillar_scores: Dict[str, float],
+        user_demand_signal: float,
+        competitor_pressure_signal: float,
+        effort_penalty: float,
+        evidence_multiplier: float,
+    ) -> Tuple[float, PriorityLevel, PriorityBand, str, float, PriorityBreakdown]:
+        base_score, _ = PrioritizationEngine.calculate_priority(pillar_scores)
+
+        demand_component = max(0.0, min(1.0, user_demand_signal)) * 8.0
+        competitor_component = max(0.0, min(1.0, competitor_pressure_signal)) * 7.0
+        effort_component = max(0.0, min(1.0, effort_penalty)) * 12.0
+        multiplier = max(0.85, min(1.15, evidence_multiplier))
+
+        adjusted_score = (base_score + demand_component + competitor_component - effort_component) * multiplier
+        final_score = round(max(0.0, min(100.0, adjusted_score)), 1)
+
+        if final_score >= 80.0:
+            priority_level = PriorityLevel.MUST_HAVE
+            priority_band = PriorityBand.VERY_HIGH
+            priority_text = "Very High"
+        elif final_score >= 60.0:
+            priority_level = PriorityLevel.SHOULD_HAVE
+            priority_band = PriorityBand.HIGH
+            priority_text = "High"
+        elif final_score >= 40.0:
+            priority_level = PriorityLevel.COULD_HAVE
+            priority_band = PriorityBand.MEDIUM
+            priority_text = "Medium"
+        else:
+            priority_level = PriorityLevel.WONT_HAVE
+            priority_band = PriorityBand.LOW
+            priority_text = "Low"
+
+        confidence = round(max(0.0, min(1.0, (multiplier - 0.8) / 0.35)), 2)
+
+        breakdown = PriorityBreakdown(
+            base_pillar_score=round(base_score, 1),
+            user_demand_signal=round(demand_component, 2),
+            competitor_pressure_signal=round(competitor_component, 2),
+            effort_penalty=round(effort_component, 2),
+            evidence_multiplier=round(multiplier, 2),
+            final_score=final_score,
+        )
+
+        return final_score, priority_level, priority_band, priority_text, confidence, breakdown

@@ -74,7 +74,8 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                     HeaderCard(
                         summary = response.summary,
                         userStory = response.userStory,
-                        priority = response.moscowPriority
+                        priority = response.moscowPriority,
+                        priorityLabel = response.priorityLabelText
                     )
                 }
 
@@ -85,6 +86,17 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                         rightLabel = "Quality Score",
                         rightValue = response.qualityScore.toInt().toString()
                     )
+                }
+
+                if (response.executionReadinessScore != null) {
+                    item {
+                        MetricRow(
+                            leftLabel = "Readiness",
+                            leftValue = response.executionReadinessScore?.toInt()?.toString() ?: "0",
+                            rightLabel = "Priority Band",
+                            rightValue = response.priorityLabelText ?: "N/A"
+                        )
+                    }
                 }
 
                 if (response.validationWarnings.isNotEmpty()) {
@@ -123,6 +135,15 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                     }
                 }
 
+                if (response.dependencies.isNotEmpty()) {
+                    item {
+                        SectionHeader("Dependencies")
+                    }
+                    items(response.dependencies) { dependency ->
+                        BulletRow(dependency)
+                    }
+                }
+
                 if (response.nonFunctionalReqs.isNotEmpty()) {
                     item {
                         SectionHeader("Non-functional Requirements")
@@ -132,12 +153,54 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                     }
                 }
 
+                if (response.structuredMetrics.isNotEmpty()) {
+                    item {
+                        SectionHeader("Structured Success Metrics")
+                    }
+                    items(response.structuredMetrics) { metric ->
+                        val metricText = buildString {
+                            append(metric.name)
+                            metric.target?.let { append(" | Target: $it") }
+                            metric.timeframe?.let { append(" | Timeframe: $it") }
+                            metric.owner?.let { append(" | Owner: $it") }
+                        }
+                        BulletRow(metricText)
+                    }
+                }
+
                 if (response.metrics.isNotEmpty()) {
                     item {
                         SectionHeader("Success Metrics")
                     }
                     items(response.metrics) { metric ->
                         BulletRow(metric)
+                    }
+                }
+
+                if (response.assumptions.isNotEmpty()) {
+                    item {
+                        SectionHeader("Assumptions")
+                    }
+                    items(response.assumptions) { itemText ->
+                        BulletRow(itemText)
+                    }
+                }
+
+                if (response.openQuestions.isNotEmpty()) {
+                    item {
+                        SectionHeader("Open Questions")
+                    }
+                    items(response.openQuestions) { itemText ->
+                        BulletRow(itemText)
+                    }
+                }
+
+                if (response.outOfScope.isNotEmpty()) {
+                    item {
+                        SectionHeader("Out of Scope")
+                    }
+                    items(response.outOfScope) { itemText ->
+                        BulletRow(itemText)
                     }
                 }
 
@@ -213,7 +276,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                                                 summary = response.summary,
                                                 description = response.description,
                                                 issueType = "Story",
-                                                priority = response.moscowPriority
+                                                priority = response.priorityLabelText ?: response.moscowPriority
                                             )
                                         )
                                         jiraStatus = JiraStatus.Success(syncResponse.jiraKey)
@@ -286,7 +349,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
     }
 
     @Composable
-    fun HeaderCard(summary: String, userStory: String, priority: String) {
+    fun HeaderCard(summary: String, userStory: String, priority: String, priorityLabel: String?) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -298,7 +361,7 @@ class ResultScreen(val response: BacklogItemGenerateV2Response) : Screen {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Summary", style = MaterialTheme.typography.titleLarge)
-                    PriorityPill(priority)
+                    PriorityPill(priorityLabel ?: priority)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(summary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

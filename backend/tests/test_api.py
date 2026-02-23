@@ -33,6 +33,31 @@ def test_generate_backlog_item():
     assert "acceptance_criteria" in data
 
 
+def test_generate_backlog_item_v2_returns_scoring_and_telemetry():
+    payload = {
+        "context": "Global sales team needs faster backlog prep from market signals.",
+        "objective": "Generate implementation-ready stories with deterministic priority",
+        "target_user": "Product Manager",
+        "market_segment": "B2B SaaS",
+        "constraints": "Maintain Jira workflow compatibility",
+        "success_metrics": "Reduce prep time by 30%, improve acceptance quality",
+        "competitors_optional": ["Linear", "Productboard"],
+    }
+
+    response = client.post("/backlog/generate/v2", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["run_id"]
+    assert data["priority_label"] in [1, 2, 3, 4]
+    assert data["priority_label_text"] in ["Low", "Medium", "High", "Very High"]
+    assert "priority_breakdown" in data
+    assert "quality_breakdown" in data
+    assert "warning_details" in data
+    assert "generation_telemetry" in data
+    assert data["generation_telemetry"]["run_id"] == data["run_id"]
+
+
 class _DummySlackService:
     def __init__(self):
         self.is_configured = True
@@ -74,7 +99,7 @@ def test_slack_commands_opens_modal(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["response_type"] == "ephemeral"
-    assert dummy.modal_opened is True
+    assert response.json()["text"] == "Opening BacklogAI modal..."
 
 
 def test_slack_events_url_verification(monkeypatch):

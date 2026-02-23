@@ -65,3 +65,20 @@ def test_validate_invest_v2_missing_metrics():
     )
     assert any("Success metrics" in w for w in warnings)
     assert score < 100
+
+
+def test_evaluate_story_v2_returns_machine_readable_warnings():
+    evaluation = QualityValidationEngine.evaluate_story_v2(
+        summary="",
+        user_story="As a user I want dashboard",
+        acceptance_criteria=["When I click submit then form saves"],
+        dependencies=["Analytics service", "CRM", "Identity service", "Email service"],
+        metrics=[],
+        non_functional_reqs=[],
+        evidence_signal=0.2,
+    )
+
+    assert evaluation["quality_score"] < 100
+    assert len(evaluation["warnings"]) > 0
+    assert all(hasattr(w, "code") and hasattr(w, "severity") for w in evaluation["warnings"])
+    assert evaluation["execution_readiness_score"] <= 100

@@ -80,11 +80,18 @@ class JiraService:
                 'summary': title,
                 'description': description,
                 'issuetype': {'name': issue_type},
-                # Add priority if your JIRA project supports it and you know the mapping
-                # 'priority': {'name': 'Medium'} 
             }
-
-            new_issue = self.jira.issue_create(fields=issue_dict)
+            mapped_priority = self._map_priority_name(priority)
+            if mapped_priority:
+                issue_dict['priority'] = {'name': mapped_priority}
+            try:
+                new_issue = self.jira.issue_create(fields=issue_dict)
+            except Exception as exc:
+                if "priority" in str(exc).lower() and "priority" in issue_dict:
+                    issue_dict.pop("priority", None)
+                    new_issue = self.jira.issue_create(fields=issue_dict)
+                else:
+                    raise
             
             return {
                 "key": new_issue['key'],
@@ -115,12 +122,23 @@ class JiraService:
                 "issuetype": {"name": issue_type},
             }
 
+            mapped_priority = self._map_priority_name(priority)
+            if mapped_priority:
+                issue_dict["priority"] = {"name": mapped_priority}
+
             if labels:
                 issue_dict["labels"] = labels
             if components:
                 issue_dict["components"] = [{"name": c} for c in components]
 
-            new_issue = self.jira.issue_create(fields=issue_dict)
+            try:
+                new_issue = self.jira.issue_create(fields=issue_dict)
+            except Exception as exc:
+                if "priority" in str(exc).lower() and "priority" in issue_dict:
+                    issue_dict.pop("priority", None)
+                    new_issue = self.jira.issue_create(fields=issue_dict)
+                else:
+                    raise
             return {
                 "key": new_issue["key"],
                 "url": f"{self.url}/browse/{new_issue['key']}"
@@ -140,6 +158,10 @@ class JiraService:
         metrics: List[str],
         rollout_plan: List[str],
         research_summary: ResearchSummary,
+        dependencies: Optional[List[str]] = None,
+        assumptions: Optional[List[str]] = None,
+        open_questions: Optional[List[str]] = None,
+        out_of_scope: Optional[List[str]] = None,
     ) -> str:
         def format_section(title: str, items: List[str]) -> str:
             if not items:
@@ -152,7 +174,11 @@ class JiraService:
             f"*Objective*\n{objective}",
             f"*User Story*\n{user_story}",
             format_section("Acceptance Criteria", acceptance_criteria),
+            format_section("Dependencies", dependencies or []),
             format_section("Non-functional Requirements", non_functional_reqs),
+            format_section("Assumptions", assumptions or []),
+            format_section("Open Questions", open_questions or []),
+            format_section("Out of Scope", out_of_scope or []),
             format_section("Risks", risks),
             format_section("Metrics", metrics),
             format_section("Rollout Plan", rollout_plan),
@@ -163,6 +189,22 @@ class JiraService:
         ]
 
         return "\n\n".join(parts)
+
+    @staticmethod
+    def _map_priority_name(priority: str | None) -> str:
+        if not priority:
+            return "Medium"
+        text = priority.strip().lower()
+
+        if text in {"very high", "must have", "4", "p1", "highest"}:
+            return "Highest"
+        if text in {"high", "should have", "3", "p2"}:
+            return "High"
+        if text in {"medium", "could have", "2", "p3"}:
+            return "Medium"
+        if text in {"low", "won't have", "wont have", "1", "p4"}:
+            return "Low"
+        return "Medium"
 
     def _mock_create_issue(self, title: str) -> Dict[str, str]:
         """Simulates JIRA creation for development/testing."""

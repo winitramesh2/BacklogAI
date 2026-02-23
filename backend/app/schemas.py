@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import Dict, List, Optional
 from uuid import UUID
 from enum import Enum
 
@@ -9,6 +9,29 @@ class PriorityLevel(str, Enum):
     SHOULD_HAVE = "Should Have"
     COULD_HAVE = "Could Have"
     WONT_HAVE = "Won't Have"
+
+
+class PriorityBand(int, Enum):
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+    VERY_HIGH = 4
+
+
+class WarningSeverity(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class WarningType(str, Enum):
+    CLARITY = "clarity"
+    INVEST = "invest"
+    TESTABILITY = "testability"
+    MEASURABILITY = "measurability"
+    SCOPE = "scope"
+    RESEARCH = "research"
+    NFR = "nfr"
 
 # --- Pillar Models ---
 class PillarScores(BaseModel):
@@ -41,12 +64,86 @@ class SubTask(BaseModel):
     title: str
     description: str
 
+
+class MetricItem(BaseModel):
+    name: str
+    baseline: Optional[str] = None
+    target: Optional[str] = None
+    timeframe: Optional[str] = None
+    owner: Optional[str] = None
+
+
+class ResearchSource(BaseModel):
+    id: int
+    url: str
+    domain: str
+    title: Optional[str] = None
+    snippet: Optional[str] = None
+    freshness_days: Optional[int] = None
+
+
+class ResearchQuality(BaseModel):
+    source_count: int = 0
+    unique_domain_count: int = 0
+    citation_coverage: float = 0.0
+    freshness_coverage: float = 0.0
+
+
+class QualityWarning(BaseModel):
+    code: str
+    type: WarningType
+    severity: WarningSeverity
+    message: str
+
+
+class PriorityBreakdown(BaseModel):
+    base_pillar_score: float
+    user_demand_signal: float
+    competitor_pressure_signal: float
+    effort_penalty: float
+    evidence_multiplier: float
+    final_score: float
+
+
+class QualityBreakdown(BaseModel):
+    clarity: float
+    invest: float
+    testability: float
+    measurability: float
+    scope: float
+    evidence: float
+    final_score: float
+
+
+class RoleScores(BaseModel):
+    pm_clarity: float
+    engineering_estimability: float
+    qa_testability: float
+    architecture_nfr_readiness: float
+
+
+class GenerationTelemetry(BaseModel):
+    run_id: str
+    model_draft: str
+    model_revise: Optional[str] = None
+    latency_ms: int
+    used_fallback: bool = False
+    warnings_count: int = 0
+    high_severity_warnings: int = 0
+    research_queries: int = 0
+    research_snippets: int = 0
+    research_sources: int = 0
+    citation_coverage: float = 0.0
+
 class ResearchSummary(BaseModel):
-    trends: List[str] = []
-    competitor_features: List[str] = []
-    differentiators: List[str] = []
-    risks: List[str] = []
-    sources: List[str] = []
+    trends: List[str] = Field(default_factory=list)
+    competitor_features: List[str] = Field(default_factory=list)
+    differentiators: List[str] = Field(default_factory=list)
+    risks: List[str] = Field(default_factory=list)
+    sources: List[str] = Field(default_factory=list)
+    citation_map: Dict[str, List[int]] = Field(default_factory=dict)
+    source_details: List[ResearchSource] = Field(default_factory=list)
+    quality: ResearchQuality = Field(default_factory=ResearchQuality)
 
 # --- Output Models ---
 class BacklogItemResponse(BaseModel):
@@ -54,13 +151,13 @@ class BacklogItemResponse(BaseModel):
     title: str
     description: str
     acceptance_criteria: List[str]
-    sub_tasks: List[SubTask] = []
+    sub_tasks: List[SubTask] = Field(default_factory=list)
     priority_score: float
     moscow_priority: PriorityLevel
     pillar_scores: PillarScores
     status: str
     jira_key: Optional[str] = None
-    validation_warnings: List[str] = []
+    validation_warnings: List[str] = Field(default_factory=list)
     
 class BacklogItemSyncResponse(BaseModel):
     id: UUID
@@ -85,32 +182,48 @@ class BacklogItemGenerateV2Request(BaseModel):
     market_segment: Optional[str] = Field(None, description="Target market or segment")
     constraints: Optional[str] = Field(None, description="Constraints and guardrails")
     success_metrics: Optional[str] = Field(None, description="How success will be measured")
-    competitors_optional: List[str] = Field(default=[], description="Known competitors")
+    competitors_optional: List[str] = Field(default_factory=list, description="Known competitors")
 
 class BacklogItemGenerateV2Response(BaseModel):
     id: UUID
+    run_id: Optional[str] = None
     summary: str
     user_story: str
     description: str
     acceptance_criteria: List[str]
-    sub_tasks: List[SubTask] = []
-    dependencies: List[str] = []
-    risks: List[str] = []
-    metrics: List[str] = []
-    rollout_plan: List[str] = []
-    non_functional_reqs: List[str] = []
+    sub_tasks: List[SubTask] = Field(default_factory=list)
+    dependencies: List[str] = Field(default_factory=list)
+    risks: List[str] = Field(default_factory=list)
+    metrics: List[str] = Field(default_factory=list)
+    structured_metrics: List[MetricItem] = Field(default_factory=list)
+    rollout_plan: List[str] = Field(default_factory=list)
+    non_functional_reqs: List[str] = Field(default_factory=list)
+    assumptions: List[str] = Field(default_factory=list)
+    open_questions: List[str] = Field(default_factory=list)
+    out_of_scope: List[str] = Field(default_factory=list)
+    confidence: float = 0.0
     research_summary: ResearchSummary
     priority_score: float
     moscow_priority: PriorityLevel
+    priority_label: PriorityBand = PriorityBand.MEDIUM
+    priority_label_text: str = "Medium"
+    priority_confidence: float = 0.0
+    priority_breakdown: PriorityBreakdown
     pillar_scores: PillarScores
     status: str
-    validation_warnings: List[str] = []
+    validation_warnings: List[str] = Field(default_factory=list)
+    warning_details: List[QualityWarning] = Field(default_factory=list)
     quality_score: float = 0.0
+    quality_breakdown: QualityBreakdown
+    quality_confidence: float = 0.0
+    role_scores: RoleScores
+    execution_readiness_score: float = 0.0
+    generation_telemetry: GenerationTelemetry
 
 class JiraSyncRequestV2(BaseModel):
     summary: str
     description: str
     issue_type: str = "Story"
     priority: Optional[str] = "Medium"
-    labels: List[str] = []
-    components: List[str] = []
+    labels: List[str] = Field(default_factory=list)
+    components: List[str] = Field(default_factory=list)

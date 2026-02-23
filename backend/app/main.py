@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +17,14 @@ from app.schemas import (
     BacklogItemSyncResponse, 
     BacklogItemGenerateV2Request,
     BacklogItemGenerateV2Response,
+    GenerationTelemetry,
+    MetricItem,
+    PriorityBand,
+    PriorityBreakdown,
+    QualityBreakdown,
+    QualityWarning,
     ResearchSummary,
+    RoleScores,
     JiraSyncRequestV2,
     JiraSyncRequest,
     PriorityLevel, 
@@ -87,6 +95,146 @@ def _verify_slack_request(headers: dict, body: bytes) -> None:
         raise HTTPException(status_code=401, detail="Invalid Slack signature")
 
 
+def _build_research_summary(payload: dict | None) -> ResearchSummary:
+    raw = payload or {}
+    return ResearchSummary(
+        trends=raw.get("trends", []),
+        competitor_features=raw.get("competitor_features", []),
+        differentiators=raw.get("differentiators", []),
+        risks=raw.get("risks", []),
+        sources=raw.get("sources", []),
+        citation_map=raw.get("citation_map", {}),
+        source_details=raw.get("source_details", []),
+        quality=raw.get("quality", {}),
+    )
+
+
+def _calculate_evidence_signal(research_summary: ResearchSummary) -> float:
+    quality = research_summary.quality
+    source_signal = min(1.0, quality.source_count / 8.0)
+    domain_signal = min(1.0, quality.unique_domain_count / 6.0)
+    citation_signal = max(0.0, min(1.0, quality.citation_coverage))
+    freshness_signal = max(0.0, min(1.0, quality.freshness_coverage))
+    return round((source_signal * 0.35) + (domain_signal * 0.2) + (citation_signal * 0.35) + (freshness_signal * 0.1), 2)
+
+
+def _compute_user_demand_signal(
+    objective: str,
+    context: str,
+    success_metrics: str | None,
+    generated_metrics: list[str],
+    target_user: str | None,
+) -> float:
+    score = 0.0
+    objective_lower = objective.lower()
+    demand_terms = ["increase", "reduce", "improve", "faster", "conversion", "retention", "adoption"]
+
+    if any(term in objective_lower for term in demand_terms):
+        score += 0.25
+    if success_metrics:
+        score += 0.25
+    if len(generated_metrics) >= 2:
+        score += 0.2
+    if target_user:
+        score += 0.15
+    if len(context) > 120:
+        score += 0.15
+    return round(min(1.0, score), 2)
+
+
+def _compute_competitor_pressure_signal(competitors: list[str], research_summary: ResearchSummary) -> float:
+    score = 0.0
+    if competitors:
+        score += min(0.3, len(competitors) * 0.1)
+    if research_summary.competitor_features:
+        score += min(0.45, len(research_summary.competitor_features) * 0.1)
+    if research_summary.differentiators:
+        score += 0.15
+    return round(min(1.0, score), 2)
+
+
+def _compute_effort_penalty(
+    dependencies: list[str],
+    open_questions: list[str],
+    constraints: str | None,
+    technical_reality_score: float,
+) -> float:
+    score = 0.0
+    score += min(0.45, len(dependencies) * 0.1)
+    score += min(0.25, len(open_questions) * 0.07)
+    if constraints:
+        score += 0.15
+    if technical_reality_score < 4.5:
+        score += 0.2
+    return round(min(1.0, score), 2)
+
+
+def _compute_evidence_multiplier(research_summary: ResearchSummary) -> float:
+    evidence = _calculate_evidence_signal(research_summary)
+    return round(0.9 + (0.2 * evidence), 2)
+
+
+def _normalize_metric_payload(generated_content: dict) -> tuple[list[str], list[MetricItem]]:
+    metrics = generated_content.get("metrics", [])
+    structured = generated_content.get("structured_metrics", [])
+
+    normalized_metrics: list[str] = []
+    structured_metrics: list[MetricItem] = []
+
+    for entry in metrics:
+        if isinstance(entry, str) and entry.strip():
+            normalized_metrics.append(entry.strip())
+        elif isinstance(entry, dict):
+            name = str(entry.get("name", "")).strip()
+            if not name:
+                continue
+            metric = MetricItem(
+                name=name,
+                baseline=str(entry.get("baseline")).strip() if entry.get("baseline") else None,
+                target=str(entry.get("target")).strip() if entry.get("target") else None,
+                timeframe=str(entry.get("timeframe")).strip() if entry.get("timeframe") else None,
+                owner=str(entry.get("owner")).strip() if entry.get("owner") else None,
+            )
+            structured_metrics.append(metric)
+            normalized_metrics.append(metric.name)
+
+    for entry in structured:
+        if not isinstance(entry, dict):
+            continue
+        name = str(entry.get("name", "")).strip()
+        if not name:
+            continue
+        metric = MetricItem(
+            name=name,
+            baseline=str(entry.get("baseline")).strip() if entry.get("baseline") else None,
+            target=str(entry.get("target")).strip() if entry.get("target") else None,
+            timeframe=str(entry.get("timeframe")).strip() if entry.get("timeframe") else None,
+            owner=str(entry.get("owner")).strip() if entry.get("owner") else None,
+        )
+        structured_metrics.append(metric)
+        normalized_metrics.append(metric.name)
+
+    deduped_metrics: list[str] = []
+    seen = set()
+    for metric in normalized_metrics:
+        key = metric.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped_metrics.append(metric)
+
+    deduped_structured: list[MetricItem] = []
+    seen_structured = set()
+    for metric in structured_metrics:
+        key = metric.name.lower()
+        if key in seen_structured:
+            continue
+        seen_structured.add(key)
+        deduped_structured.append(metric)
+
+    return deduped_metrics[:8], deduped_structured[:8]
+
+
 async def _generate_and_post_preview(input_payload: dict, channel_id: str, slack_user_id: str) -> None:
     try:
         generated_content = await story_engine.generate_story_v2(
@@ -103,28 +251,59 @@ async def _generate_and_post_preview(input_payload: dict, channel_id: str, slack
         user_story = generated_content.get("user_story", input_payload["objective"])
         acceptance_criteria = generated_content.get("acceptance_criteria", [])
         dependencies = generated_content.get("dependencies", [])
-        metrics = generated_content.get("metrics", [])
+        metrics, structured_metrics = _normalize_metric_payload(generated_content)
         non_functional_reqs = generated_content.get("non_functional_reqs", [])
+        open_questions = generated_content.get("open_questions", [])
         pillar_scores = _normalize_pillar_scores(generated_content.get("pillar_scores"))
-        _, priority_level = prioritization_engine.calculate_priority(pillar_scores.dict())
+
+        research_summary = _build_research_summary(generated_content.get("research_summary"))
+        user_demand_signal = _compute_user_demand_signal(
+            objective=input_payload["objective"],
+            context=input_payload["context"],
+            success_metrics=input_payload.get("success_metrics"),
+            generated_metrics=metrics,
+            target_user=input_payload.get("target_user"),
+        )
+        competitor_pressure_signal = _compute_competitor_pressure_signal(
+            competitors=input_payload.get("competitors_optional", []),
+            research_summary=research_summary,
+        )
+        effort_penalty = _compute_effort_penalty(
+            dependencies=dependencies,
+            open_questions=open_questions,
+            constraints=input_payload.get("constraints"),
+            technical_reality_score=pillar_scores.technical_reality,
+        )
+        evidence_multiplier = _compute_evidence_multiplier(research_summary)
+
+        (
+            priority_score,
+            priority_level,
+            priority_band,
+            priority_text,
+            priority_confidence,
+            priority_breakdown,
+        ) = prioritization_engine.calculate_priority_v2(
+            pillar_scores=pillar_scores.dict(),
+            user_demand_signal=user_demand_signal,
+            competitor_pressure_signal=competitor_pressure_signal,
+            effort_penalty=effort_penalty,
+            evidence_multiplier=evidence_multiplier,
+        )
         priority_value = priority_level.value if hasattr(priority_level, "value") else str(priority_level)
-        warnings, quality_score = quality_engine.validate_invest_v2(
+
+        quality_eval = quality_engine.evaluate_story_v2(
             summary=summary,
             user_story=user_story,
             acceptance_criteria=acceptance_criteria,
             dependencies=dependencies,
             metrics=metrics,
             non_functional_reqs=non_functional_reqs,
+            evidence_signal=_calculate_evidence_signal(research_summary),
         )
-
-        research_summary_payload = generated_content.get("research_summary") or {}
-        research_summary = ResearchSummary(
-            trends=research_summary_payload.get("trends", []),
-            competitor_features=research_summary_payload.get("competitor_features", []),
-            differentiators=research_summary_payload.get("differentiators", []),
-            risks=research_summary_payload.get("risks", []),
-            sources=research_summary_payload.get("sources", []),
-        )
+        warnings = quality_eval["warnings_text"]
+        warning_details: list[QualityWarning] = quality_eval["warnings"]
+        quality_score = quality_eval["quality_score"]
 
         description = jira_service.build_description_template(
             context=input_payload["context"],
@@ -144,10 +323,21 @@ async def _generate_and_post_preview(input_payload: dict, channel_id: str, slack
             "description": description,
             "acceptance_criteria": acceptance_criteria,
             "priority": priority_value,
+            "priority_score": priority_score,
+            "priority_label": int(priority_band.value),
+            "priority_label_text": priority_text,
+            "priority_confidence": priority_confidence,
+            "priority_breakdown": priority_breakdown.model_dump(),
             "quality_score": quality_score,
+            "quality_breakdown": quality_eval["quality_breakdown"].model_dump(),
+            "quality_confidence": quality_eval["quality_confidence"],
+            "execution_readiness_score": quality_eval["execution_readiness_score"],
+            "role_scores": quality_eval["role_scores"].model_dump(),
+            "warning_details": [warning.model_dump() for warning in warning_details],
             "labels": [],
             "components": [],
             "warnings": warnings,
+            "structured_metrics": [metric.model_dump() for metric in structured_metrics],
         }
 
         session = await slack_service.create_session(
@@ -164,6 +354,8 @@ async def _generate_and_post_preview(input_payload: dict, channel_id: str, slack
             acceptance_criteria=acceptance_criteria,
             quality_score=quality_score,
             moscow_priority=priority_value,
+            priority_label=priority_text,
+            execution_readiness_score=quality_eval["execution_readiness_score"],
             session_id=str(session.id),
         )
     except Exception as exc:
@@ -233,11 +425,20 @@ def _normalize_pillar_scores(scores: dict | None) -> PillarScores:
         "technical_reality": 5.0,
     }
     if scores:
-        defaults.update({k: v for k, v in scores.items() if v is not None})
+        for key, value in scores.items():
+            if key not in defaults or value is None:
+                continue
+            try:
+                defaults[key] = max(0.0, min(10.0, float(value)))
+            except (TypeError, ValueError):
+                continue
     return PillarScores(**defaults)
 
 @app.post("/backlog/generate/v2", response_model=BacklogItemGenerateV2Response)
 async def generate_backlog_item_v2(item: BacklogItemGenerateV2Request):
+    run_id = str(uuid4())
+    started = time.perf_counter()
+
     generated_content = await story_engine.generate_story_v2(
         context=item.context,
         objective=item.objective,
@@ -248,96 +449,189 @@ async def generate_backlog_item_v2(item: BacklogItemGenerateV2Request):
         competitors=item.competitors_optional,
     )
 
-    summary = generated_content.get("summary", item.objective)
-    user_story = generated_content.get("user_story", item.objective)
-    acceptance_criteria = generated_content.get("acceptance_criteria", [])
-    sub_tasks = generated_content.get("sub_tasks", [])
-    dependencies = generated_content.get("dependencies", [])
-    risks = generated_content.get("risks", [])
-    metrics = generated_content.get("metrics", [])
-    rollout_plan = generated_content.get("rollout_plan", [])
-    non_functional_reqs = generated_content.get("non_functional_reqs", [])
+    def evaluate_payload(payload: dict) -> dict:
+        summary = payload.get("summary", item.objective)
+        user_story = payload.get("user_story", item.objective)
+        acceptance_criteria = payload.get("acceptance_criteria", [])
+        sub_tasks = payload.get("sub_tasks", [])
+        dependencies = payload.get("dependencies", [])
+        risks = payload.get("risks", [])
+        metrics, structured_metrics = _normalize_metric_payload(payload)
+        rollout_plan = payload.get("rollout_plan", [])
+        non_functional_reqs = payload.get("non_functional_reqs", [])
+        assumptions = payload.get("assumptions", [])
+        open_questions = payload.get("open_questions", [])
+        out_of_scope = payload.get("out_of_scope", [])
+        confidence = round(max(0.0, min(1.0, float(payload.get("confidence", 0.65)))), 2)
 
-    pillar_scores = _normalize_pillar_scores(generated_content.get("pillar_scores"))
-    priority_score, priority_level = prioritization_engine.calculate_priority(
-        pillar_scores.dict()
-    )
+        research_summary = _build_research_summary(payload.get("research_summary"))
+        pillar_scores = _normalize_pillar_scores(payload.get("pillar_scores"))
 
-    warnings, quality_score = quality_engine.validate_invest_v2(
-        summary=summary,
-        user_story=user_story,
-        acceptance_criteria=acceptance_criteria,
-        dependencies=dependencies,
-        metrics=metrics,
-        non_functional_reqs=non_functional_reqs,
-    )
-
-    if warnings and story_engine.client:
-        revised = await story_engine.revise_story_v2(generated_content, warnings)
-        summary = revised.get("summary", summary)
-        user_story = revised.get("user_story", user_story)
-        acceptance_criteria = revised.get("acceptance_criteria", acceptance_criteria)
-        sub_tasks = revised.get("sub_tasks", sub_tasks)
-        dependencies = revised.get("dependencies", dependencies)
-        risks = revised.get("risks", risks)
-        metrics = revised.get("metrics", metrics)
-        rollout_plan = revised.get("rollout_plan", rollout_plan)
-        non_functional_reqs = revised.get("non_functional_reqs", non_functional_reqs)
-        pillar_scores = _normalize_pillar_scores(revised.get("pillar_scores"))
-        priority_score, priority_level = prioritization_engine.calculate_priority(
-            pillar_scores.dict()
+        user_demand_signal = _compute_user_demand_signal(
+            objective=item.objective,
+            context=item.context,
+            success_metrics=item.success_metrics,
+            generated_metrics=metrics,
+            target_user=item.target_user,
         )
-        warnings, quality_score = quality_engine.validate_invest_v2(
+        competitor_pressure_signal = _compute_competitor_pressure_signal(
+            competitors=item.competitors_optional,
+            research_summary=research_summary,
+        )
+        effort_penalty = _compute_effort_penalty(
+            dependencies=dependencies,
+            open_questions=open_questions,
+            constraints=item.constraints,
+            technical_reality_score=pillar_scores.technical_reality,
+        )
+        evidence_multiplier = _compute_evidence_multiplier(research_summary)
+        (
+            priority_score,
+            priority_level,
+            priority_band,
+            priority_text,
+            priority_confidence,
+            priority_breakdown,
+        ) = prioritization_engine.calculate_priority_v2(
+            pillar_scores=pillar_scores.dict(),
+            user_demand_signal=user_demand_signal,
+            competitor_pressure_signal=competitor_pressure_signal,
+            effort_penalty=effort_penalty,
+            evidence_multiplier=evidence_multiplier,
+        )
+
+        quality_eval = quality_engine.evaluate_story_v2(
             summary=summary,
             user_story=user_story,
             acceptance_criteria=acceptance_criteria,
             dependencies=dependencies,
             metrics=metrics,
             non_functional_reqs=non_functional_reqs,
+            evidence_signal=_calculate_evidence_signal(research_summary),
         )
 
-        generated_content = revised
+        return {
+            "summary": summary,
+            "user_story": user_story,
+            "acceptance_criteria": acceptance_criteria,
+            "sub_tasks": sub_tasks,
+            "dependencies": dependencies,
+            "risks": risks,
+            "metrics": metrics,
+            "structured_metrics": structured_metrics,
+            "rollout_plan": rollout_plan,
+            "non_functional_reqs": non_functional_reqs,
+            "assumptions": assumptions,
+            "open_questions": open_questions,
+            "out_of_scope": out_of_scope,
+            "confidence": confidence,
+            "research_summary": research_summary,
+            "pillar_scores": pillar_scores,
+            "priority_score": priority_score,
+            "priority_level": priority_level,
+            "priority_band": priority_band,
+            "priority_text": priority_text,
+            "priority_confidence": priority_confidence,
+            "priority_breakdown": priority_breakdown,
+            "quality_eval": quality_eval,
+        }
 
-    research_summary_payload = generated_content.get("research_summary") or {}
-    research_summary = ResearchSummary(
-        trends=research_summary_payload.get("trends", []),
-        competitor_features=research_summary_payload.get("competitor_features", []),
-        differentiators=research_summary_payload.get("differentiators", []),
-        risks=research_summary_payload.get("risks", []),
-        sources=research_summary_payload.get("sources", []),
+    evaluation = evaluate_payload(generated_content)
+
+    warning_messages = evaluation["quality_eval"]["warnings_text"]
+    warning_details = evaluation["quality_eval"]["warnings"]
+    should_revise = story_engine.client and (
+        evaluation["quality_eval"]["quality_score"] < 85.0
+        or any(warning.severity.value == "high" for warning in warning_details)
     )
+
+    if should_revise:
+        revised = await story_engine.revise_story_v2(generated_content, warning_messages)
+        generated_content = revised
+        evaluation = evaluate_payload(generated_content)
+        warning_messages = evaluation["quality_eval"]["warnings_text"]
+        warning_details = evaluation["quality_eval"]["warnings"]
+
+    research_summary = evaluation["research_summary"]
 
     description = jira_service.build_description_template(
         context=item.context,
         objective=item.objective,
-        user_story=user_story,
-        acceptance_criteria=acceptance_criteria,
-        non_functional_reqs=non_functional_reqs,
-        risks=risks,
-        metrics=metrics,
-        rollout_plan=rollout_plan,
+        user_story=evaluation["user_story"],
+        acceptance_criteria=evaluation["acceptance_criteria"],
+        non_functional_reqs=evaluation["non_functional_reqs"],
+        risks=evaluation["risks"],
+        metrics=evaluation["metrics"],
+        rollout_plan=evaluation["rollout_plan"],
+        dependencies=evaluation["dependencies"],
+        assumptions=evaluation["assumptions"],
+        open_questions=evaluation["open_questions"],
+        out_of_scope=evaluation["out_of_scope"],
         research_summary=research_summary,
+    )
+
+    generation_meta = generated_content.get("_meta", {}) if isinstance(generated_content, dict) else {}
+    latency_ms = int((time.perf_counter() - started) * 1000)
+    high_severity_count = sum(1 for warning in warning_details if warning.severity.value == "high")
+    telemetry = GenerationTelemetry(
+        run_id=run_id,
+        model_draft=str(generation_meta.get("model_draft") or story_engine.draft_model),
+        model_revise=str(generation_meta.get("model_revise") or story_engine.revise_model),
+        latency_ms=latency_ms,
+        used_fallback=bool(generation_meta.get("used_fallback", False)),
+        warnings_count=len(warning_details),
+        high_severity_warnings=high_severity_count,
+        research_queries=int(generation_meta.get("research_queries", 0)),
+        research_snippets=int(generation_meta.get("research_snippets", 0)),
+        research_sources=int(generation_meta.get("research_sources", research_summary.quality.source_count)),
+        citation_coverage=research_summary.quality.citation_coverage,
+    )
+
+    logger.info(
+        "story_generate_v2 run_id=%s quality_score=%.1f execution_readiness=%.1f priority_score=%.1f warnings=%d fallback=%s",
+        run_id,
+        evaluation["quality_eval"]["quality_score"],
+        evaluation["quality_eval"]["execution_readiness_score"],
+        evaluation["priority_score"],
+        len(warning_details),
+        telemetry.used_fallback,
     )
 
     response = BacklogItemGenerateV2Response(
         id=uuid4(),
-        summary=summary,
-        user_story=user_story,
+        run_id=run_id,
+        summary=evaluation["summary"],
+        user_story=evaluation["user_story"],
         description=description,
-        acceptance_criteria=acceptance_criteria,
-        sub_tasks=sub_tasks,
-        dependencies=dependencies,
-        risks=risks,
-        metrics=metrics,
-        rollout_plan=rollout_plan,
-        non_functional_reqs=non_functional_reqs,
+        acceptance_criteria=evaluation["acceptance_criteria"],
+        sub_tasks=evaluation["sub_tasks"],
+        dependencies=evaluation["dependencies"],
+        risks=evaluation["risks"],
+        metrics=evaluation["metrics"],
+        structured_metrics=evaluation["structured_metrics"],
+        rollout_plan=evaluation["rollout_plan"],
+        non_functional_reqs=evaluation["non_functional_reqs"],
+        assumptions=evaluation["assumptions"],
+        open_questions=evaluation["open_questions"],
+        out_of_scope=evaluation["out_of_scope"],
+        confidence=evaluation["confidence"],
         research_summary=research_summary,
-        priority_score=priority_score,
-        moscow_priority=priority_level,
-        pillar_scores=pillar_scores,
+        priority_score=evaluation["priority_score"],
+        moscow_priority=evaluation["priority_level"],
+        priority_label=evaluation["priority_band"],
+        priority_label_text=evaluation["priority_text"],
+        priority_confidence=evaluation["priority_confidence"],
+        priority_breakdown=evaluation["priority_breakdown"],
+        pillar_scores=evaluation["pillar_scores"],
         status="draft",
-        validation_warnings=warnings,
-        quality_score=quality_score,
+        validation_warnings=warning_messages,
+        warning_details=warning_details,
+        quality_score=evaluation["quality_eval"]["quality_score"],
+        quality_breakdown=evaluation["quality_eval"]["quality_breakdown"],
+        quality_confidence=evaluation["quality_eval"]["quality_confidence"],
+        role_scores=evaluation["quality_eval"]["role_scores"],
+        execution_readiness_score=evaluation["quality_eval"]["execution_readiness_score"],
+        generation_telemetry=telemetry,
     )
 
     return response

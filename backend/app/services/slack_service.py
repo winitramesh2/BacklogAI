@@ -228,10 +228,18 @@ class SlackService:
         acceptance_criteria: List[str],
         quality_score: float,
         moscow_priority: str,
+        priority_label: Optional[str],
+        execution_readiness_score: Optional[float],
         session_id: str,
     ) -> Dict[str, Any]:
         ac_lines = acceptance_criteria[:5]
         ac_text = "\n".join([f"• {line}" for line in ac_lines]) if ac_lines else "• None"
+        priority_line = f"{moscow_priority} ({priority_label})" if priority_label else moscow_priority
+        readiness_text = (
+            f"*🚦 Execution Readiness*\n{int(execution_readiness_score)}"
+            if execution_readiness_score is not None
+            else "*🚦 Execution Readiness*\nN/A"
+        )
         blocks = [
             {
                 "type": "header",
@@ -251,8 +259,9 @@ class SlackService:
                 "type": "section",
                 "fields": [
                     {"type": "mrkdwn", "text": f"*📝 Summary*\n{summary}"},
-                    {"type": "mrkdwn", "text": f"*📌 Priority*\n{moscow_priority}"},
+                    {"type": "mrkdwn", "text": f"*📌 Priority*\n{priority_line}"},
                     {"type": "mrkdwn", "text": f"*✅ Quality Score*\n{int(quality_score)}"},
+                    {"type": "mrkdwn", "text": readiness_text},
                 ],
             },
             {
